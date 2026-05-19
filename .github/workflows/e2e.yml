@@ -1,0 +1,33 @@
+name: E2E (manual)
+
+# Playwright E2E 는 medikr.kr 또는 medikr.pages.dev 에 실제 배포된 후에만 의미가 있음.
+# 따라서 빌드 파이프라인과 분리, 수동 트리거 또는 사이트 라이브 후 활성화.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Site URL to test (예: https://medikr.kr)'
+        required: true
+        default: 'https://medikr.pages.dev'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
