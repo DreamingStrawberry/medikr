@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { listEasyDrugs } from '../lib/mfds';
+
+const { items, totalCount } = await listEasyDrugs(1, 20);
+---
+<Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 효능·부작용·병용금기 검색">
+  <h2>최근 등록 의약품</h2>
+  <p>총 <strong>{totalCount.toLocaleString()}</strong>개 의약품 정보 (e약은요 기준)</p>
+  <ul>
+    {items.map((drug) => (
+      <li>
+        <a href={`/약/${drug.itemSeq}`}>{drug.itemName}</a>
+        {drug.entpName && <span style="color:#666"> — {drug.entpName}</span>}
+      </li>
+    ))}
+  </ul>
+</Layout>

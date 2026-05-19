@@ -1,0 +1,21 @@
+{
+  "name": "medikr",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "description": "medikr.kr — 식약처 공식 데이터 기반 의약품 정보",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
