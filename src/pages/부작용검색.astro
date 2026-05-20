@@ -1,0 +1,140 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AdSlot from '../components/AdSlot.astro';
+import { prefetchAll } from '../lib/mfds';
+
+const { drugs } = await prefetchAll();
+// 부작용/상호작용/주의 텍스트만 클라이언트로 (이름/업체와 함께)
+const idx = drugs
+  .filter((d) => d.seQesitm || d.intrcQesitm || d.atpnQesitm)
+  .map((d) => ({
+    s: d.itemSeq,
+    n: d.itemName,
+    e: d.entpName,
+    se: (d.seQesitm ?? '').slice(0, 500),
+    in: (d.intrcQesitm ?? '').slice(0, 300),
+    at: (d.atpnQesitm ?? '').slice(0, 300),
+  }));
+
+const popular = [
+  '두통', '발진', '구토', '설사', '어지러움', '졸음', '불면', '간기능', '신기능',
+  '심장', '혈압', '체중', '식욕', '가려움', '저혈당', '변비', '시력', '청력',
+];
+---
+<Layout
+  title="부작용 역검색"
+  description="증상을 입력하면 그 증상이 부작용으로 등록된 의약품을 찾아드립니다"
+>
+  <section class="intro">
+    <h2>부작용 역검색</h2>
+    <p>의약품을 복용 중 의심 증상이 생겼을 때, 그 증상이 <strong>부작용·상호작용·주의사항</strong>으로 등록된 약을 찾아보세요. 식약처 e약은요 {idx.length.toLocaleString()}종 텍스트 분석.</p>
+    <p class="warn">의심 증상이 있으면 본 검색 결과와 관계없이 즉시 의사·약사와 상담하세요. 본 도구는 참고 자료입니다.</p>
+  </section>
+
+  <section class="se-panel">
+    <h3>증상 입력</h3>
+    <input type="search" id="se-q" placeholder="예: 두통, 어지러움, 발진, 졸음" autocomplete="off" />
+    <div class="pop-tags">
+      {popular.map((p) => <button class="tag" data-q={p}>{p}</button>)}
+    </div>
+  </section>
+
+  <AdSlot slot="8901234567" format="auto" />
+
+  <section id="se-result" hidden class="se-result">
+    <h3 id="se-title">검색 결과</h3>
+    <div id="se-list"></div>
+  </section>
+
+  <script type="application/json" id="se-data" set:html={JSON.stringify(idx)}></script>
+  <script set:html={`
+    (function() {
+      const DATA = JSON.parse(document.getElementById('se-data').textContent);
+      const q = document.getElementById('se-q');
+      const box = document.getElementById('se-result');
+      const title = document.getElementById('se-title');
+      const list = document.getElementById('se-list');
+      const tags = document.querySelectorAll('.tag');
+      let timer;
+
+      function search(term) {
+        term = term.trim().toLowerCase();
+        if (term.length < 2) { box.hidden = true; return; }
+        const matches = [];
+        for (const d of DATA) {
+          const inSE = d.se.toLowerCase().includes(term);
+          const inIN = d.in.toLowerCase().includes(term);
+          const inAT = d.at.toLowerCase().includes(term);
+          if (!inSE && !inIN && !inAT) continue;
+          const sources = [];
+          if (inSE) sources.push('부작용');
+          if (inIN) sources.push('상호작용');
+          if (inAT) sources.push('주의');
+          matches.push({ d: d, sources: sources });
+        }
+        box.hidden = false;
+        title.textContent = '"' + term + '" 관련 의약품 ' + matches.length.toLocaleString() + '종';
+        if (matches.length === 0) {
+          list.innerHTML = '<div class="empty">검색 결과가 없습니다. 다른 키워드로 시도하세요.</div>';
+          return;
+        }
+        list.innerHTML = matches.slice(0, 200).map(function(m) {
+          const tagsHtml = m.sources.map(function(s) {
+            return '<span class="src src-' + s + '">' + s + '</span>';
+          }).join('');
+          return '<li><a href="/약/' + m.d.s + '">' + m.d.n + '</a>'
+            + '<span class="se-entp">' + m.d.e + '</span>'
+            + '<div class="se-tags">' + tagsHtml + '</div></li>';
+        }).join('');
+        if (matches.length > 200) {
+          list.innerHTML += '<p class="more">외 ' + (matches.length - 200) + '종</p>';
+        }
+        list.innerHTML = '<ul class="se-list">' + list.innerHTML + '</ul>';
+      }
+      q.addEventListener('input', function(e) {
+        clearTimeout(timer); timer = setTimeout(function() { search(e.target.value); }, 200);
+      });
+      tags.forEach(function(t) {
+        t.addEventListener('click', function() {
+          q.value = t.dataset.q;
+          search(t.dataset.q);
+          box.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    })();
+  `}></script>
+</Layout>
+
+<style>
+  .intro p { color: var(--text-muted); }
+  .intro .warn { background: #fef3c7; border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 4px; font-size: 13px; margin-top: 8px; }
+  .se-panel { padding: 22px 26px; }
+  #se-q {
+    width: 100%; padding: 14px 18px; font-size: 16px;
+    border: 1px solid var(--border-strong); border-radius: 8px;
+    font-family: var(--sans);
+  }
+  #se-q:focus { outline: none; border-color: var(--navy-800); box-shadow: 0 0 0 3px rgba(15,23,42,0.08); }
+  .pop-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .tag {
+    padding: 6px 12px; background: var(--bg-muted); border: 1px solid var(--border);
+    border-radius: 20px; cursor: pointer; font-size: 13px; color: var(--text);
+    font-family: var(--sans); transition: all 0.15s;
+  }
+  .tag:hover { background: var(--navy-900); color: #fff; border-color: var(--navy-900); }
+  .se-result { padding: 22px 26px; }
+  .se-list { list-style: none; padding: 0; margin: 0; }
+  .se-list li {
+    padding: 14px 16px; background: #fff; border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 6px;
+  }
+  .se-list a { font-weight: 600; color: var(--navy-900); }
+  .se-entp { color: var(--text-muted); font-size: 13px; margin-left: 8px; }
+  .se-tags { margin-top: 4px; display: flex; gap: 6px; }
+  .src { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .src-부작용 { background: #fef2f2; color: #dc2626; }
+  .src-상호작용 { background: #eff6ff; color: #2563eb; }
+  .src-주의 { background: #fffbeb; color: var(--accent); }
+  .empty { padding: 30px; text-align: center; color: var(--text-light); font-style: italic; }
+  .more { text-align: center; color: var(--text-muted); margin-top: 12px; font-size: 13px; }
+</style>

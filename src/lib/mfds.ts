@@ -161,7 +161,7 @@ type PrefetchCache = {
 
 let _prefetch: Promise<PrefetchCache> | null = null;
 
-async function fetchAll<T>(
+export async function fetchAll<T>(
   service: string,
   endpoint: string,
   extra: Record<string, string> = {},
@@ -179,6 +179,39 @@ async function fetchAll<T>(
     if (items.length < PER || pageNo * PER >= totalCount) break;
   }
   return all;
+}
+
+// DUR 카테고리별 전체 fetch (페이지별 prefetch)
+export type DurEntry = {
+  ITEM_SEQ: string;
+  ITEM_NAME: string;
+  ENTP_NAME: string;
+  INGR_KOR_NAME?: string;
+  PROHBT_CONTENT?: string;
+  NOTIFICATION_DATE?: string;
+  PREGNANCY_LEVEL?: string;       // pwnm 등급 (1: 절대금기, 2: 잠재위험)
+  AGE_BASE?: string;              // 연령기준
+};
+
+let _pwnmCache: Promise<DurEntry[]> | null = null;
+export function fetchAllPwnmTaboos(): Promise<DurEntry[]> {
+  if (_pwnmCache) return _pwnmCache;
+  _pwnmCache = fetchAll<DurEntry>('DURPrdlstInfoService03', 'getPwnmTabooInfoList03');
+  return _pwnmCache;
+}
+
+let _odsnCache: Promise<DurEntry[]> | null = null;
+export function fetchAllOdsnAtent(): Promise<DurEntry[]> {
+  if (_odsnCache) return _odsnCache;
+  _odsnCache = fetchAll<DurEntry>('DURPrdlstInfoService03', 'getOdsnAtentInfoList03');
+  return _odsnCache;
+}
+
+let _ageCache: Promise<DurEntry[]> | null = null;
+export function fetchAllAgeTaboos(): Promise<DurEntry[]> {
+  if (_ageCache) return _ageCache;
+  _ageCache = fetchAll<DurEntry>('DURPrdlstInfoService03', 'getSpcifyAgrdeTabooInfoList03');
+  return _ageCache;
 }
 
 export function prefetchAll(): Promise<PrefetchCache> {
