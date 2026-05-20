@@ -1,3 +1,1 @@
-# AdSense ads.txt — placeholder
-# AdSense 승인 후 publisher ID 를 채워주세요. 예시:
-# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+google.com, pub-6215635393643995, DIRECT, f08c47fec0942fa0

@@ -41,11 +41,14 @@ const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | unde
   )}
 
   {ADSENSE_CLIENT && (
-    <script
-      async
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-      crossorigin="anonymous"
-    ></script>
+    <>
+      <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
+      <script
+        async
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+        crossorigin="anonymous"
+      ></script>
+    </>
   )}
 
   <script type="application/ld+json" set:html={JSON.stringify({

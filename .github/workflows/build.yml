@@ -28,6 +28,10 @@ jobs:
       - name: Astro build
         env:
           MFDS_API_KEY: ${{ secrets.MFDS_API_KEY }}
+          PUBLIC_ADSENSE_CLIENT: ${{ vars.PUBLIC_ADSENSE_CLIENT }}
+          PUBLIC_GA4_ID: ${{ vars.PUBLIC_GA4_ID }}
+          PUBLIC_GOOGLE_VERIFY: ${{ vars.PUBLIC_GOOGLE_VERIFY }}
+          PUBLIC_NAVER_VERIFY: ${{ vars.PUBLIC_NAVER_VERIFY }}
         run: npm run build
 
       - name: Upload build artifact (backup)
