@@ -1,0 +1,30 @@
+{
+  "name": "medikr — 의약품 정보",
+  "short_name": "medikr",
+  "description": "식약처 공식 데이터 기반 의약품 정보 검색. 처방분석·부작용 역검색·임부안전 도구.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafaf7",
+  "theme_color": "#0f172a",
+  "lang": "ko",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    { "name": "처방전 분석", "url": "/처방분석", "description": "약 여러 개의 병용금기 검사" },
+    { "name": "부작용 검색", "url": "/부작용검색", "description": "증상으로 의심 약 찾기" },
+    { "name": "알약 식별", "url": "/모양", "description": "모양·색으로 약 찾기" }
+  ]
+}

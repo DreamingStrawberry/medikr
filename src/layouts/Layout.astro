@@ -30,6 +30,8 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
   {ogImage && <meta property="og:image" content={ogImage} />}
   <meta name="twitter:card" content="summary" />
   <link rel="canonical" href={canonical} />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="alternate" type="application/rss+xml" title="medikr RSS" href="/rss.xml" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
