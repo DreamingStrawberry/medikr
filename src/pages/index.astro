@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import AdSlot from '../components/AdSlot.astro';
 import { prefetchAll } from '../lib/mfds';
 
 const { drugs, permitMap } = await prefetchAll();
@@ -77,6 +78,8 @@ function fmtDate(d: string): string {
       <span class="ql-desc">자주 묻는 질문</span>
     </a>
   </section>
+
+  <AdSlot slot="9123450001" format="auto" />
 
   <section class="recent-section">
     <div class="section-head">

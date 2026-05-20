@@ -170,10 +170,26 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
       box-shadow: 0 0 0 3px rgba(15,23,42,0.08);
     }
     .header-search::before {
-      content: ''; position: absolute; left: 13px; top: 50%;
-      width: 14px; height: 14px; transform: translateY(-50%);
+      content: ''; position: absolute; left: 13px; top: 18px;
+      width: 14px; height: 14px;
       background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2.5' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+      pointer-events: none;
     }
+    .hdr-sug {
+      list-style: none; padding: 0; margin: 4px 0 0;
+      background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      max-height: 320px; overflow-y: auto; box-shadow: var(--shadow-md);
+      position: absolute; left: 0; right: 0; top: 100%; z-index: 60;
+    }
+    .hdr-sug li { border-bottom: 1px solid var(--border); }
+    .hdr-sug li:last-child { border-bottom: 0; }
+    .hdr-sug a {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 14px; color: var(--navy-900); font-size: 13px;
+      text-decoration: none;
+    }
+    .hdr-sug a:hover { background: #f1f5f9; color: var(--accent); text-decoration: none; }
+    .hdr-sug a span { color: var(--text-muted); font-size: 11px; margin-left: 8px; }
 
     /* ─── Main / Typography ───────────────────────── */
     main { max-width: 880px; margin: 0 auto; padding: 32px 20px 48px; }
@@ -289,7 +305,8 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
         <span></span><span></span><span></span>
       </button>
       <form action="/search" method="get" class="header-search" role="search">
-        <input type="search" name="q" placeholder="약 이름 검색" autocomplete="off" />
+        <input type="search" name="q" id="hdr-q" placeholder="약 이름 검색" autocomplete="off" />
+        <ul id="hdr-sug" class="hdr-sug" hidden></ul>
       </form>
       <nav class="site-nav" id="site-nav" aria-label="주요 메뉴">
         <a href="/처방분석" class="nav-highlight">처방분석</a>
@@ -307,12 +324,42 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
     (function() {
       const btn = document.getElementById('nav-toggle');
       const nav = document.getElementById('site-nav');
-      if (!btn || !nav) return;
-      btn.addEventListener('click', function() {
-        const open = nav.classList.toggle('open');
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        btn.classList.toggle('open', open);
-      });
+      if (btn && nav) {
+        btn.addEventListener('click', function() {
+          const open = nav.classList.toggle('open');
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          btn.classList.toggle('open', open);
+        });
+      }
+      // 헤더 검색 자동완성 (lazy load /api/drug-index.json)
+      const q = document.getElementById('hdr-q');
+      const sug = document.getElementById('hdr-sug');
+      if (q && sug) {
+        let INDEX = null;
+        let timer;
+        async function loadIndex() {
+          if (INDEX) return;
+          try {
+            const r = await fetch('/api/drug-index.json');
+            INDEX = await r.json();
+          } catch (e) { INDEX = []; }
+        }
+        function suggest() {
+          const term = q.value.trim().toLowerCase();
+          if (term.length < 2 || !INDEX) { sug.hidden = true; return; }
+          const matches = INDEX
+            .filter(d => d.n.toLowerCase().includes(term))
+            .slice(0, 8);
+          if (matches.length === 0) { sug.hidden = true; return; }
+          sug.innerHTML = matches.map(d => '<li><a href="/약/' + d.s + '">' + d.n + '<span>' + d.e + '</span></a></li>').join('');
+          sug.hidden = false;
+        }
+        q.addEventListener('focus', loadIndex);
+        q.addEventListener('input', function() { clearTimeout(timer); timer = setTimeout(suggest, 120); });
+        document.addEventListener('click', function(e) {
+          if (!sug.contains(e.target) && e.target !== q) sug.hidden = true;
+        });
+      }
     })();
   `}></script>
   <main>
