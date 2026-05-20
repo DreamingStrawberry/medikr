@@ -1,21 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { listEasyDrugs } from '../lib/mfds';
+import { prefetchAll } from '../lib/mfds';
 
 type SearchItem = { itemSeq: string; itemName: string; entpName: string };
 
-// 빌드 시 약 인덱스 수집 (graceful — KEY 없으면 빈 배열)
-// W4 단계: 전체 4,757 약 인덱스 (50 호출 × 100ms = 25초 추가, 부담 적음).
-const all: SearchItem[] = [];
-const PER = 100;
-const MAX_PAGES = 50;
-for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
-  const { items, totalCount } = await listEasyDrugs(pageNo, PER);
-  for (const d of items) {
-    all.push({ itemSeq: d.itemSeq, itemName: d.itemName, entpName: d.entpName });
-  }
-  if (items.length < PER || pageNo * PER >= totalCount) break;
-}
+const { drugs } = await prefetchAll();
+const all: SearchItem[] = drugs.map((d) => ({
+  itemSeq: d.itemSeq,
+  itemName: d.itemName,
+  entpName: d.entpName,
+}));
 ---
 <Layout title="검색" description={`${all.length.toLocaleString()}개 의약품 이름·업체로 빠른 검색`}>
   <h2>의약품 검색</h2>

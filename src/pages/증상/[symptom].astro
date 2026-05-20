@@ -1,23 +1,17 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { listEasyDrugs, type EasyDrug } from '../../lib/mfds';
+import { type EasyDrug } from '../../lib/mfds';
 import { SYMPTOMS, type Symptom } from '../../lib/symptoms';
 
 export async function getStaticPaths() {
   const { SYMPTOMS } = await import('../../lib/symptoms');
-  const { listEasyDrugs } = await import('../../lib/mfds');
+  const { prefetchAll } = await import('../../lib/mfds');
 
-  // W4 단계: 전체 4,757 약에서 효능 키워드 매칭.
-  const ALL: EasyDrug[] = [];
-  for (let p = 1; p <= 50; p++) {
-    const { items, totalCount } = await listEasyDrugs(p, 100);
-    ALL.push(...items);
-    if (items.length < 100 || p * 100 >= totalCount) break;
-  }
+  const { drugs } = await prefetchAll();
   return SYMPTOMS.map((s) => {
-    const matches = ALL.filter((d) =>
-      s.keywords.some((k) => (d.efcyQesitm ?? '').includes(k))
-    ).slice(0, 100);
+    const matches = drugs
+      .filter((d) => s.keywords.some((k) => (d.efcyQesitm ?? '').includes(k)))
+      .slice(0, 200);
     return {
       params: { symptom: s.slug },
       props: { symptom: s, drugs: matches },
@@ -37,10 +31,10 @@ const { symptom, drugs } = Astro.props;
 >
   <h2>{symptom.label} 증상에 쓰는 약</h2>
   <p style="color:#666">총 <strong>{drugs.length}</strong>개 의약품. 효능에 "{symptom.keywords.join(', ')}" 키워드가 포함된 약을 모았습니다.</p>
-  <p style="color:#888;font-size:13px">⚠️ 본 목록은 정보 제공용이며, 실제 복용은 의사·약사 상담 후 결정하십시오.</p>
+  <p style="color:#888;font-size:13px">본 목록은 정보 제공용이며, 실제 복용은 의사·약사 상담 후 결정하십시오.</p>
 
   {drugs.length === 0 ? (
-    <p style="color:#888;font-style:italic">데이터가 아직 빌드되지 않았습니다. (MFDS_API_KEY 환경변수 설정 후 재배포 시 노출)</p>
+    <p style="color:#888;font-style:italic">데이터가 아직 빌드되지 않았습니다.</p>
   ) : (
     <ul>
       {drugs.map((d) => (

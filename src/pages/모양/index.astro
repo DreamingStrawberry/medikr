@@ -1,18 +1,14 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { listEasyDrugs } from '../../lib/mfds';
+import { prefetchAll } from '../../lib/mfds';
 
-// 모양/색 인덱스 — 빌드 시 모든 약 메타 수집 후 클라이언트 필터
 type Item = { itemSeq: string; itemName: string; image?: string };
-// W4 단계: 전체 4,757 약.
-const all: Item[] = [];
-for (let p = 1; p <= 50; p++) {
-  const { items, totalCount } = await listEasyDrugs(p, 100);
-  for (const d of items) {
-    all.push({ itemSeq: d.itemSeq, itemName: d.itemName, image: d.itemImage });
-  }
-  if (items.length < 100 || p * 100 >= totalCount) break;
-}
+
+const { drugs, pillMap } = await prefetchAll();
+const all: Item[] = drugs.map((d) => {
+  const p = pillMap.get(d.itemSeq);
+  return { itemSeq: d.itemSeq, itemName: d.itemName, image: d.itemImage || p?.ITEM_IMAGE };
+});
 ---
 <Layout title="모양·색으로 찾기" description={`${all.length}개 약 이미지로 알약 식별`}>
   <h2>모양·색으로 찾기</h2>

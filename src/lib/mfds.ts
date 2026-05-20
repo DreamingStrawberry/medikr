@@ -140,3 +140,57 @@ export async function getDurTaboos(itemSeq: string): Promise<DurTaboo[]> {
   });
   return items;
 }
+
+// ─── 빌드 전용 prefetch 캐시 ─────────────────────────────
+// 빌드 시 모든 데이터를 한 번에 다운로드 → 페이지마다 메모리 lookup
+// 4,757 페이지를 페이지당 0 API 호출로 빌드 가능
+
+type PrefetchCache = {
+  drugs: EasyDrug[];
+  drugMap: Map<string, EasyDrug>;
+  pillMap: Map<string, PillIdent>;
+  permitMap: Map<string, DrugPermit>;
+};
+
+let _prefetch: Promise<PrefetchCache> | null = null;
+
+async function fetchAll<T>(
+  service: string,
+  endpoint: string,
+  extra: Record<string, string> = {},
+  maxPages = 500
+): Promise<T[]> {
+  const all: T[] = [];
+  const PER = 100;
+  for (let pageNo = 1; pageNo <= maxPages; pageNo++) {
+    const { items, totalCount } = await fetchApi<T>(service, endpoint, {
+      ...extra,
+      pageNo: String(pageNo),
+      numOfRows: String(PER),
+    });
+    all.push(...items);
+    if (items.length < PER || pageNo * PER >= totalCount) break;
+  }
+  return all;
+}
+
+export function prefetchAll(): Promise<PrefetchCache> {
+  if (_prefetch) return _prefetch;
+  _prefetch = (async () => {
+    console.log('[mfds prefetch] e약은요 + 낱알식별 + 허가정보 다운로드 시작...');
+    const t0 = Date.now();
+    const [drugs, pills, permits] = await Promise.all([
+      fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList'),
+      fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03'),
+      fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07'),
+    ]);
+    const drugMap = new Map(drugs.map((d) => [d.itemSeq, d]));
+    const pillMap = new Map(pills.map((p) => [p.ITEM_SEQ, p]));
+    const permitMap = new Map(permits.map((p) => [p.ITEM_SEQ, p]));
+    console.log(
+      `[mfds prefetch] ${drugs.length} e약은요, ${pills.length} 낱알, ${permits.length} 허가 — ${(Date.now() - t0) / 1000}s`
+    );
+    return { drugs, drugMap, pillMap, permitMap };
+  })();
+  return _prefetch;
+}
