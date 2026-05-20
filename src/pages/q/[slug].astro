@@ -1,0 +1,97 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { QAS, type QA } from '../../lib/qa-seed';
+
+export async function getStaticPaths() {
+  return QAS.map((qa) => ({ params: { slug: qa.slug }, props: { qa } }));
+}
+
+interface Props { qa: QA }
+const { qa } = Astro.props;
+
+const related = QAS.filter((x) => x.slug !== qa.slug && x.category === qa.category).slice(0, 5);
+
+// markdown-lite render: **bold**, single \n → <br>, \n\n → paragraph
+function renderBody(s: string): string {
+  return s
+    .split(/\n\n+/)
+    .map((p) => {
+      const inner = p
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/^- /gm, '<li>')
+        .replace(/\n/g, '<br>');
+      if (inner.includes('<li>')) return '<ul>' + inner.replace(/<li>/g, '</li><li>').replace(/^<\/li>/, '') + '</li></ul>';
+      return '<p>' + inner + '</p>';
+    })
+    .join('\n');
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [{
+    '@type': 'Question',
+    name: qa.q,
+    acceptedAnswer: { '@type': 'Answer', text: qa.a },
+  }],
+};
+---
+<Layout title={qa.q} description={qa.a.slice(0, 150).replace(/\n/g, ' ')}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <article class="qa-article">
+    <div class="cat-tag">{qa.category}</div>
+    <h1>{qa.q}</h1>
+    <p class="meta">최종 업데이트 {qa.updated}</p>
+
+    <AdSlot slot="9456789012" format="auto" />
+
+    <section class="qa-body" set:html={renderBody(qa.a)} />
+
+    <AdSlot slot="9567890123" format="auto" />
+
+    {related.length > 0 && (
+      <section class="related">
+        <h3>관련 질문</h3>
+        <ul>
+          {related.map((r) => (
+            <li><a href={`/q/${r.slug}`}>{r.q}</a></li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="disclaimer">
+      <p><strong>주의</strong>: 본 내용은 일반적인 정보 제공 목적이며, 의료 행위가 아닙니다. 자신의 상태에 맞는 정확한 진단·처방은 의사·약사와 상담하십시오.</p>
+    </section>
+  </article>
+</Layout>
+
+<style>
+  .qa-article { max-width: 760px; margin: 0 auto; }
+  .cat-tag {
+    display: inline-block; background: var(--navy-100); color: var(--navy-800);
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .qa-article h1 {
+    font-family: var(--serif); font-weight: 900;
+    font-size: 28px; line-height: 1.4; margin: 0 0 8px;
+  }
+  .qa-article .meta { color: var(--text-light); font-size: 13px; margin: 0 0 20px; }
+  .qa-body { background: #fff; padding: 28px 30px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); font-size: 16px; line-height: 1.8; }
+  .qa-body p { margin: 0 0 14px; }
+  .qa-body p:last-child { margin-bottom: 0; }
+  .qa-body strong { color: var(--navy-900); }
+  .qa-body ul { padding-left: 22px; margin: 8px 0 14px; }
+  .qa-body li { margin-bottom: 4px; }
+  .related { background: var(--bg-muted) !important; }
+  .related ul { list-style: none; padding: 0; margin: 8px 0 0; }
+  .related li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .related li:last-child { border-bottom: 0; }
+  .related a { color: var(--navy-900); font-weight: 500; }
+  .disclaimer { background: #fef3c7 !important; border-left: 3px solid var(--accent) !important; border: 0; }
+  .disclaimer p { margin: 0; font-size: 13px; color: var(--navy-800); }
+</style>
