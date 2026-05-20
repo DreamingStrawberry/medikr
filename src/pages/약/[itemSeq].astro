@@ -4,33 +4,106 @@ import AdSlot from '../../components/AdSlot.astro';
 import { prefetchAll, getDurTaboos, type EasyDrug, type PillIdent, type DrugPermit } from '../../lib/mfds';
 
 export async function getStaticPaths() {
-  // 전체 e약은요 4,757 페이지 — prefetch 로 한 번에 데이터 다운로드 후 메모리 lookup
   const { drugs, pillMap, permitMap } = await prefetchAll();
-  return drugs.map((drug) => ({
-    params: { itemSeq: drug.itemSeq },
-    props: {
-      drug,
-      pill: pillMap.get(drug.itemSeq) ?? null,
-      permit: permitMap.get(drug.itemSeq) ?? null,
-    },
-  }));
+
+  // 사전 색인 — 빌드 시 한 번 만들고 모든 페이지에서 공유
+  const ingredientMap = new Map<string, string[]>();
+  const classMap = new Map<string, string[]>();
+  const entpMap = new Map<string, string[]>();
+  for (const d of drugs) {
+    const permit = permitMap.get(d.itemSeq);
+    if (permit?.ITEM_INGR_NAME) {
+      for (const ing of permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean)) {
+        if (!ingredientMap.has(ing)) ingredientMap.set(ing, []);
+        ingredientMap.get(ing)!.push(d.itemSeq);
+      }
+    }
+    const pill = pillMap.get(d.itemSeq);
+    if (pill?.CLASS_NAME) {
+      if (!classMap.has(pill.CLASS_NAME)) classMap.set(pill.CLASS_NAME, []);
+      classMap.get(pill.CLASS_NAME)!.push(d.itemSeq);
+    }
+    if (d.entpName) {
+      if (!entpMap.has(d.entpName)) entpMap.set(d.entpName, []);
+      entpMap.get(d.entpName)!.push(d.itemSeq);
+    }
+  }
+
+  const byItem = new Map(drugs.map((d) => [d.itemSeq, d]));
+
+  return drugs.map((drug) => {
+    const permit = permitMap.get(drug.itemSeq);
+    const pill = pillMap.get(drug.itemSeq);
+    // 같은 성분 약 5개
+    const sameIngredient: { seq: string; name: string }[] = [];
+    if (permit?.ITEM_INGR_NAME) {
+      for (const ing of permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean)) {
+        const list = ingredientMap.get(ing) ?? [];
+        for (const seq of list) {
+          if (seq === drug.itemSeq) continue;
+          if (sameIngredient.find((x) => x.seq === seq)) continue;
+          const x = byItem.get(seq);
+          if (x) sameIngredient.push({ seq, name: x.itemName });
+          if (sameIngredient.length >= 5) break;
+        }
+        if (sameIngredient.length >= 5) break;
+      }
+    }
+    // 같은 분류 약 5개
+    const sameClass: { seq: string; name: string }[] = [];
+    if (pill?.CLASS_NAME) {
+      const list = classMap.get(pill.CLASS_NAME) ?? [];
+      for (const seq of list) {
+        if (seq === drug.itemSeq) continue;
+        const x = byItem.get(seq);
+        if (x) sameClass.push({ seq, name: x.itemName });
+        if (sameClass.length >= 5) break;
+      }
+    }
+    // 같은 제약사 약 5개
+    const sameEntp: { seq: string; name: string }[] = [];
+    if (drug.entpName) {
+      const list = entpMap.get(drug.entpName) ?? [];
+      for (const seq of list) {
+        if (seq === drug.itemSeq) continue;
+        const x = byItem.get(seq);
+        if (x) sameEntp.push({ seq, name: x.itemName });
+        if (sameEntp.length >= 5) break;
+      }
+    }
+    return {
+      params: { itemSeq: drug.itemSeq },
+      props: { drug, pill, permit, sameIngredient, sameClass, sameEntp },
+    };
+  });
 }
 
 interface Props {
   drug: EasyDrug;
-  pill: PillIdent | null;
-  permit: DrugPermit | null;
+  pill: PillIdent | null | undefined;
+  permit: DrugPermit | null | undefined;
+  sameIngredient: { seq: string; name: string }[];
+  sameClass: { seq: string; name: string }[];
+  sameEntp: { seq: string; name: string }[];
 }
-const { drug, pill, permit } = Astro.props;
+const { drug, pill, permit, sameIngredient, sameClass, sameEntp } = Astro.props;
 const { itemSeq } = Astro.params;
 
-// DUR 은 페이지당 1 호출 (4,757개라 prefetch 불가, 페이지별 lazy)
 const taboos = await getDurTaboos(itemSeq!).catch(() => []);
 
 const imageSrc = drug.itemImage || pill?.ITEM_IMAGE;
 const metaDesc = (drug.efcyQesitm ?? `${drug.itemName} 의 효능, 부작용, 주의사항 등 식약처 공식 정보`).slice(0, 150);
 
-const jsonLd = {
+const breadcrumbList = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: '홈', item: 'https://medikr.kr/' },
+    { '@type': 'ListItem', position: 2, name: '의약품', item: 'https://medikr.kr/search' },
+    { '@type': 'ListItem', position: 3, name: drug.itemName, item: new URL(Astro.url.pathname, Astro.site).href },
+  ],
+};
+const drugJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Drug',
   name: drug.itemName,
@@ -43,10 +116,20 @@ const jsonLd = {
 };
 ---
 <Layout title={drug.itemName} description={metaDesc} ogImage={imageSrc}>
-  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <script type="application/ld+json" set:html={JSON.stringify(drugJsonLd)} />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbList)} />
+
+  <nav class="crumb" aria-label="breadcrumb">
+    <a href="/">홈</a>
+    <span>›</span>
+    <a href="/search">의약품</a>
+    <span>›</span>
+    <span class="cur">{drug.itemName}</span>
+  </nav>
+
   <article>
     <h2>{drug.itemName}</h2>
-    <p style="color:#555;font-size:14px">
+    <p style="color:var(--text-muted);font-size:14px">
       {drug.entpName} · 품목코드 <code>{drug.itemSeq}</code>
     </p>
 
@@ -73,54 +156,13 @@ const jsonLd = {
       </section>
     )}
 
-    {drug.efcyQesitm && (
-      <section>
-        <h3>효능·효과</h3>
-        <p>{drug.efcyQesitm}</p>
-      </section>
-    )}
-
-    {drug.useMethodQesitm && (
-      <section>
-        <h3>사용법</h3>
-        <p>{drug.useMethodQesitm}</p>
-      </section>
-    )}
-
-    {drug.atpnWarnQesitm && (
-      <section>
-        <h3>사전 경고</h3>
-        <p>{drug.atpnWarnQesitm}</p>
-      </section>
-    )}
-
-    {drug.atpnQesitm && (
-      <section>
-        <h3>주의사항</h3>
-        <p>{drug.atpnQesitm}</p>
-      </section>
-    )}
-
-    {drug.intrcQesitm && (
-      <section>
-        <h3>상호작용</h3>
-        <p>{drug.intrcQesitm}</p>
-      </section>
-    )}
-
-    {drug.seQesitm && (
-      <section>
-        <h3>부작용</h3>
-        <p>{drug.seQesitm}</p>
-      </section>
-    )}
-
-    {drug.depositMethodQesitm && (
-      <section>
-        <h3>보관 방법</h3>
-        <p>{drug.depositMethodQesitm}</p>
-      </section>
-    )}
+    {drug.efcyQesitm && (<section><h3>효능·효과</h3><p>{drug.efcyQesitm}</p></section>)}
+    {drug.useMethodQesitm && (<section><h3>사용법</h3><p>{drug.useMethodQesitm}</p></section>)}
+    {drug.atpnWarnQesitm && (<section><h3>사전 경고</h3><p>{drug.atpnWarnQesitm}</p></section>)}
+    {drug.atpnQesitm && (<section><h3>주의사항</h3><p>{drug.atpnQesitm}</p></section>)}
+    {drug.intrcQesitm && (<section><h3>상호작용</h3><p>{drug.intrcQesitm}</p></section>)}
+    {drug.seQesitm && (<section><h3>부작용</h3><p>{drug.seQesitm}</p></section>)}
+    {drug.depositMethodQesitm && (<section><h3>보관 방법</h3><p>{drug.depositMethodQesitm}</p></section>)}
 
     <AdSlot slot="2345678901" format="auto" />
 
@@ -131,11 +173,12 @@ const jsonLd = {
           {taboos.slice(0, 10).map((t) => (
             <li>
               <strong>{t.MIXTURE_ITEM_NAME}</strong>
-              {t.PROHBT_CONTENT && <span style="color:#666"> — {t.PROHBT_CONTENT}</span>}
+              {t.PROHBT_CONTENT && <span style="color:var(--text-muted)"> — {t.PROHBT_CONTENT}</span>}
             </li>
           ))}
         </ul>
-        {taboos.length > 10 && <p style="color:#777;font-size:13px">외 {taboos.length - 10}건</p>}
+        {taboos.length > 10 && <p style="color:var(--text-muted);font-size:13px">외 {taboos.length - 10}건</p>}
+        <p class="link-row"><a href={`/처방분석`}>이 약과 함께 먹는 약 검사하기 →</a></p>
       </section>
     )}
 
@@ -150,5 +193,74 @@ const jsonLd = {
         </dl>
       </section>
     )}
+
+    {(sameIngredient.length > 0 || sameClass.length > 0 || sameEntp.length > 0) && (
+      <section class="related-section">
+        <h3>관련 의약품</h3>
+        {sameIngredient.length > 0 && (
+          <div class="rel-block">
+            <h4>같은 성분 의약품</h4>
+            <ul class="rel-list">
+              {sameIngredient.map((r) => (
+                <li><a href={`/약/${r.seq}`}>{r.name}</a></li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {sameClass.length > 0 && (
+          <div class="rel-block">
+            <h4>같은 약효 분류</h4>
+            <ul class="rel-list">
+              {sameClass.map((r) => (
+                <li><a href={`/약/${r.seq}`}>{r.name}</a></li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {sameEntp.length > 0 && (
+          <div class="rel-block">
+            <h4>{drug.entpName} 의 다른 의약품</h4>
+            <ul class="rel-list">
+              {sameEntp.map((r) => (
+                <li><a href={`/약/${r.seq}`}>{r.name}</a></li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+    )}
   </article>
 </Layout>
+
+<style>
+  .crumb {
+    font-size: 13px; color: var(--text-muted); margin-bottom: 12px;
+    display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  }
+  .crumb a { color: var(--text-muted); }
+  .crumb a:hover { color: var(--navy-900); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .link-row { margin-top: 12px; }
+  .link-row a {
+    display: inline-block; padding: 8px 14px; background: var(--navy-900);
+    color: #fff; border-radius: 6px; font-size: 13px; font-weight: 600;
+  }
+  .link-row a:hover { background: var(--accent); color: #fff; text-decoration: none; }
+  .related-section { background: var(--bg-muted) !important; }
+  .rel-block { margin-bottom: 18px; }
+  .rel-block:last-child { margin-bottom: 0; }
+  .rel-block h4 {
+    font-size: 14px; font-weight: 700; color: var(--text-muted);
+    margin: 0 0 8px; letter-spacing: 0.02em;
+  }
+  .rel-list {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 4px;
+  }
+  .rel-list li {
+    padding: 8px 12px; background: #fff; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13px;
+  }
+  .rel-list a { color: var(--navy-900); font-weight: 500; }
+</style>
