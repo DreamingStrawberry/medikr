@@ -1,6 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import AdSlot from '../../components/AdSlot.astro';
+import FavoriteButton from '../../components/FavoriteButton.astro';
+import ShareButtons from '../../components/ShareButtons.astro';
 import { prefetchAll, getDurTaboos, type EasyDrug, type PillIdent, type DrugPermit } from '../../lib/mfds';
 import { QAS } from '../../lib/qa-seed';
 
@@ -147,6 +149,10 @@ const drugJsonLd = {
       {drug.entpName} · 품목코드 <code>{drug.itemSeq}</code>
     </p>
 
+    <div class="action-row">
+      <FavoriteButton itemSeq={drug.itemSeq} itemName={drug.itemName} />
+    </div>
+
     {imageSrc && <img src={imageSrc} alt={`${drug.itemName} 이미지`} loading="lazy" />}
 
     <AdSlot slot="1234567890" format="auto" />
@@ -225,6 +231,8 @@ const drugJsonLd = {
       </section>
     )}
 
+    <ShareButtons title={drug.itemName} url={new URL(Astro.url.pathname, Astro.site).href} />
+
     {(sameIngredient.length > 0 || sameClass.length > 0 || sameEntp.length > 0) && (
       <section class="related-section">
         <h3>관련 의약품</h3>
@@ -271,6 +279,7 @@ const drugJsonLd = {
   .crumb a { color: var(--text-muted); }
   .crumb a:hover { color: var(--navy-900); }
   .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .action-row { margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
   .link-row { margin-top: 12px; }
   .link-row a {
     display: inline-block; padding: 8px 14px; background: var(--navy-900);

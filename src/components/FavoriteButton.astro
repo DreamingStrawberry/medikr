@@ -1,0 +1,56 @@
+---
+interface Props { itemSeq: string; itemName: string }
+const { itemSeq, itemName } = Astro.props;
+---
+<button
+  class="fav-btn"
+  data-item-seq={itemSeq}
+  data-item-name={itemName}
+  aria-label="즐겨찾기에 추가"
+  type="button"
+>
+  <span class="fav-icon" aria-hidden="true">☆</span>
+  <span class="fav-label">즐겨찾기</span>
+</button>
+
+<script set:html={`
+  (function() {
+    const KEY = 'medikr.favorites';
+    function load() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } }
+    function save(o) { localStorage.setItem(KEY, JSON.stringify(o)); }
+    document.querySelectorAll('.fav-btn').forEach(function(btn) {
+      const seq = btn.dataset.itemSeq;
+      const name = btn.dataset.itemName;
+      const icon = btn.querySelector('.fav-icon');
+      const label = btn.querySelector('.fav-label');
+      function render() {
+        const favs = load();
+        const on = !!favs[seq];
+        btn.classList.toggle('on', on);
+        if (icon) icon.textContent = on ? '★' : '☆';
+        if (label) label.textContent = on ? '즐겨찾기 해제' : '즐겨찾기';
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+      btn.addEventListener('click', function() {
+        const favs = load();
+        if (favs[seq]) delete favs[seq];
+        else favs[seq] = { name: name, added: Date.now() };
+        save(favs);
+        render();
+      });
+      render();
+    });
+  })();
+`}></script>
+
+<style>
+  .fav-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; background: #fff; border: 1px solid var(--border-strong);
+    border-radius: 20px; cursor: pointer; font-size: 13px; font-family: var(--sans);
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .fav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .fav-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .fav-icon { font-size: 16px; line-height: 1; }
+</style>

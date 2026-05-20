@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="내 즐겨찾기 약" description="medikr 에서 즐겨찾기 한 의약품 모음 (브라우저 저장)">
+  <h2>내 즐겨찾기 약</h2>
+  <p class="meta">브라우저에 저장된 즐겨찾기 — 로그인 없이 이 기기에서만 보입니다.</p>
+
+  <div id="fav-list" class="fav-list"></div>
+  <p id="fav-empty" hidden class="empty">아직 즐겨찾기가 없습니다. 약 상세 페이지에서 별 모양 버튼을 눌러 추가하세요.</p>
+
+  <script set:html={`
+    (function() {
+      const KEY = 'medikr.favorites';
+      let favs;
+      try { favs = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { favs = {}; }
+      const entries = Object.entries(favs).sort(function(a, b) { return (b[1].added || 0) - (a[1].added || 0); });
+      const list = document.getElementById('fav-list');
+      const empty = document.getElementById('fav-empty');
+      if (entries.length === 0) {
+        empty.hidden = false;
+        return;
+      }
+      list.innerHTML = entries.map(function(e) {
+        const seq = e[0], info = e[1];
+        const date = info.added ? new Date(info.added).toLocaleDateString('ko-KR') : '';
+        return '<div class="fav-card">'
+          + '<a href="/약/' + seq + '">' + info.name + '</a>'
+          + '<span class="fav-meta">추가: ' + date + '</span>'
+          + '<button class="fav-remove" data-seq="' + seq + '" aria-label="제거">×</button>'
+          + '</div>';
+      }).join('');
+      list.addEventListener('click', function(e) {
+        const btn = e.target.closest('.fav-remove');
+        if (!btn) return;
+        delete favs[btn.dataset.seq];
+        localStorage.setItem(KEY, JSON.stringify(favs));
+        location.reload();
+      });
+    })();
+  `}></script>
+</Layout>
+
+<style>
+  .meta { color: var(--text-muted); margin-bottom: 16px; }
+  .fav-list { display: flex; flex-direction: column; gap: 6px; }
+  .fav-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px; background: #fff; border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .fav-card a { font-weight: 600; color: var(--navy-900); flex: 1; }
+  .fav-meta { color: var(--text-muted); font-size: 12px; }
+  .fav-remove {
+    background: transparent; border: 0; cursor: pointer; font-size: 20px;
+    color: var(--text-muted); padding: 0 6px;
+  }
+  .fav-remove:hover { color: #dc2626; }
+  .empty { padding: 30px; text-align: center; color: var(--text-light); font-style: italic; }
+</style>

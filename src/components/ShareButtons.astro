@@ -1,0 +1,46 @@
+---
+interface Props { title: string; url: string }
+const { title, url } = Astro.props;
+const enc = encodeURIComponent;
+---
+<div class="share-row">
+  <span class="share-label">공유:</span>
+  <a href={`https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`} target="_blank" rel="noopener" class="share-btn share-tw" aria-label="트위터 공유">X (Twitter)</a>
+  <a href={`https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`} target="_blank" rel="noopener" class="share-btn share-fb" aria-label="페이스북 공유">Facebook</a>
+  <a href={`https://story.kakao.com/share?url=${enc(url)}`} target="_blank" rel="noopener" class="share-btn share-kk" aria-label="카카오스토리 공유">카카오</a>
+  <button class="share-btn share-copy" data-copy-url={url} type="button" aria-label="URL 복사">URL 복사</button>
+</div>
+
+<script set:html={`
+  document.querySelectorAll('.share-copy').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copyUrl);
+        const orig = btn.textContent;
+        btn.textContent = '복사됨';
+        setTimeout(function() { btn.textContent = orig; }, 1500);
+      } catch (e) {
+        prompt('URL 을 복사하세요', btn.dataset.copyUrl);
+      }
+    });
+  });
+`}></script>
+
+<style>
+  .share-row {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin: 14px 0; padding: 12px 14px; background: var(--bg-muted);
+    border-radius: 8px; font-size: 13px;
+  }
+  .share-label { color: var(--text-muted); font-weight: 600; margin-right: 4px; }
+  .share-btn {
+    padding: 6px 12px; background: #fff; border: 1px solid var(--border);
+    border-radius: 16px; color: var(--navy-800); font-size: 12px; font-weight: 500;
+    text-decoration: none; cursor: pointer; font-family: var(--sans);
+    transition: all 0.15s;
+  }
+  .share-btn:hover { background: var(--navy-900); color: #fff; border-color: var(--navy-900); text-decoration: none; }
+  .share-tw:hover { background: #000; border-color: #000; }
+  .share-fb:hover { background: #1877f2; border-color: #1877f2; }
+  .share-kk:hover { background: #fee500; color: #000; border-color: #fee500; }
+</style>
