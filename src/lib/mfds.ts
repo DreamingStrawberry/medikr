@@ -58,6 +58,7 @@ export type DurTaboo = {
   ITEM_NAME: string;
   MIXTURE_ITEM_SEQ?: string;
   MIXTURE_ITEM_NAME?: string;
+  MIXTURE_INGR_KOR_NAME?: string;
   PROHBT_CONTENT?: string;
   NOTIFICATION_DATE?: string;
 };
@@ -134,11 +135,17 @@ export async function getDrugPermit(itemSeq: string): Promise<DrugPermit | null>
   return items[0] ?? null;
 }
 
+const _durCache = new Map<string, Promise<DurTaboo[]>>();
 export async function getDurTaboos(itemSeq: string): Promise<DurTaboo[]> {
-  const { items } = await fetchApi<DurTaboo>('DURPrdlstInfoService03', 'getUsjntTabooInfoList03', {
-    itemSeq,
-  });
-  return items;
+  if (!_durCache.has(itemSeq)) {
+    _durCache.set(
+      itemSeq,
+      fetchApi<DurTaboo>('DURPrdlstInfoService03', 'getUsjntTabooInfoList03', { itemSeq }).then(
+        (r) => r.items
+      )
+    );
+  }
+  return _durCache.get(itemSeq)!;
 }
 
 // ─── 빌드 전용 prefetch 캐시 ─────────────────────────────

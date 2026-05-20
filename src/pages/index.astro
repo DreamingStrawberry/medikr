@@ -28,9 +28,13 @@ function fmtDate(d: string): string {
   </section>
 
   <section class="quick-links">
+    <a href="/처방분석" class="ql ql-feature">
+      <span class="ql-title">처방전 분석</span>
+      <span class="ql-desc">병용금기 자동 검사</span>
+    </a>
     <a href="/search" class="ql">
       <span class="ql-title">이름으로</span>
-      <span class="ql-desc">약 이름·업체명 검색</span>
+      <span class="ql-desc">약 이름·업체명</span>
     </a>
     <a href="/모양" class="ql">
       <span class="ql-title">모양·색</span>
@@ -47,10 +51,6 @@ function fmtDate(d: string): string {
     <a href="/분류" class="ql">
       <span class="ql-title">약효 분류</span>
       <span class="ql-desc">소화제·진통제</span>
-    </a>
-    <a href="/제약사" class="ql">
-      <span class="ql-title">제약사별</span>
-      <span class="ql-desc">제조사 의약품</span>
     </a>
   </section>
 
@@ -161,6 +161,13 @@ function fmtDate(d: string): string {
     color: var(--navy-900); font-size: 17px;
   }
   .ql-desc { color: var(--text-muted); font-size: 12.5px; }
+  .ql-feature {
+    background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
+    border-color: var(--navy-900);
+  }
+  .ql-feature .ql-title { color: #fff; }
+  .ql-feature .ql-desc { color: var(--accent-light); }
+  .ql-feature:hover { border-color: var(--accent); }
 
   .recent-section { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
   .section-head {

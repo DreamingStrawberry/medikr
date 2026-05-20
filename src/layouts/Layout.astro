@@ -144,6 +144,10 @@ const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | unde
       color: var(--navy-700); font-weight: 500; letter-spacing: -0.01em;
     }
     .site-nav a:hover { background: var(--navy-100); color: var(--navy-900); }
+    .site-nav a.nav-highlight {
+      background: var(--navy-900); color: #fff;
+    }
+    .site-nav a.nav-highlight:hover { background: var(--accent); color: #fff; }
 
     .header-search {
       flex: 1; min-width: 220px; max-width: 380px;
@@ -259,12 +263,12 @@ const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | unde
         <input type="search" name="q" placeholder="약 이름 검색" autocomplete="off" />
       </form>
       <nav class="site-nav" aria-label="주요 메뉴">
+        <a href="/처방분석" class="nav-highlight">처방분석</a>
         <a href="/search">검색</a>
         <a href="/모양">모양</a>
         <a href="/증상">증상</a>
         <a href="/성분">성분</a>
         <a href="/분류">분류</a>
-        <a href="/제약사">제약사</a>
       </nav>
     </div>
   </header>
