@@ -1,53 +1,206 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { listEasyDrugs } from '../lib/mfds';
+import { prefetchAll } from '../lib/mfds';
 
-const { items, totalCount } = await listEasyDrugs(1, 20);
+const { drugs } = await prefetchAll();
+const recent = drugs.slice(0, 12);
 ---
 <Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 효능·부작용·병용금기 검색">
-  <section>
-    <h2>의약품 정보 검색</h2>
-    <p>식품의약품안전처 공식 데이터를 기반으로 의약품의 <strong>효능·부작용·주의사항·병용금기</strong>를 검색할 수 있습니다.</p>
-    <p>
-      <a
-        href="/search"
-        style="display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;margin:4px 6px 4px 0"
-      >🔍 이름으로 검색</a>
-      <a
-        href="/모양"
-        style="display:inline-block;padding:10px 18px;background:#fff;color:#2563eb;border:1px solid #2563eb;border-radius:6px;text-decoration:none;font-weight:600;margin:4px 6px 4px 0"
-      >💊 모양·색</a>
-      <a
-        href="/증상"
-        style="display:inline-block;padding:10px 18px;background:#fff;color:#2563eb;border:1px solid #2563eb;border-radius:6px;text-decoration:none;font-weight:600;margin:4px 6px 4px 0"
-      >🤒 증상별</a>
-    </p>
+  <section class="hero">
+    <p class="eyebrow">식품의약품안전처 공식 데이터</p>
+    <h1>안전한 복용을 위한 <br />의약품 정보 사전</h1>
+    <p class="lead">{drugs.length.toLocaleString()}종 의약품의 효능·부작용·병용금기·성분 정보를 한 곳에서.</p>
+    <form action="/search" method="get" class="hero-search">
+      <input type="search" name="q" placeholder="예: 타이레놀, 게보린, 활명수…" autocomplete="off" />
+      <button type="submit">검색</button>
+    </form>
+    <p class="hero-meta">총 {drugs.length.toLocaleString()}종 · 매일 자동 갱신</p>
   </section>
 
-  <section>
-    <h3>최근 등록 의약품</h3>
-    {totalCount > 0 ? (
-      <>
-        <p style="color:#666;font-size:14px">총 <strong>{totalCount.toLocaleString()}</strong>개 의약품 (e약은요 기준)</p>
-        <ul>
-          {items.map((drug) => (
-            <li>
-              <a href={`/약/${drug.itemSeq}`}>{drug.itemName}</a>
-              {drug.entpName && <span style="color:#666"> — {drug.entpName}</span>}
-            </li>
-          ))}
-        </ul>
-      </>
+  <section class="quick-links">
+    <a href="/search" class="ql">
+      <span class="ql-title">이름으로</span>
+      <span class="ql-desc">약 이름·업체명 검색</span>
+    </a>
+    <a href="/모양" class="ql">
+      <span class="ql-title">모양·색</span>
+      <span class="ql-desc">알약 시각 식별</span>
+    </a>
+    <a href="/증상" class="ql">
+      <span class="ql-title">증상별</span>
+      <span class="ql-desc">감기·두통·소화</span>
+    </a>
+    <a href="/성분" class="ql">
+      <span class="ql-title">성분별</span>
+      <span class="ql-desc">같은 성분 묶음</span>
+    </a>
+    <a href="/분류" class="ql">
+      <span class="ql-title">약효 분류</span>
+      <span class="ql-desc">소화제·진통제</span>
+    </a>
+    <a href="/제약사" class="ql">
+      <span class="ql-title">제약사별</span>
+      <span class="ql-desc">제조사 의약품</span>
+    </a>
+  </section>
+
+  <section class="recent-section">
+    <div class="section-head">
+      <h3>최근 등록 의약품</h3>
+      <a href="/search" class="see-more">전체 보기 →</a>
+    </div>
+    {recent.length > 0 ? (
+      <ul class="drug-grid">
+        {recent.map((d) => (
+          <li>
+            <a href={`/약/${d.itemSeq}`} class="drug-card">
+              <span class="drug-name">{d.itemName}</span>
+              {d.entpName && <span class="drug-entp">{d.entpName}</span>}
+            </a>
+          </li>
+        ))}
+      </ul>
     ) : (
-      <p style="color:#888;font-style:italic">
-        의약품 데이터를 불러오는 중입니다. (환경변수 MFDS_API_KEY 설정 후 재배포 시 표시됩니다)
-      </p>
+      <p class="muted">데이터를 불러오는 중입니다.</p>
     )}
   </section>
 
-  <section>
-    <h3>이 사이트는?</h3>
-    <p>본 사이트는 일반인을 위한 의약품 정보 큐레이션 사이트입니다. 식약처가 운영하는 사이트가 아니며, 정보는 <a href="https://www.data.go.kr/" rel="noopener" target="_blank">공공데이터포털</a> 의 식약처 OpenAPI 를 통해 수집·갱신됩니다.</p>
-    <p><strong>주의</strong>: 본 사이트의 정보는 의료 행위가 아닙니다. 복용·중단 결정은 의사·약사와 상의하십시오.</p>
+  <section class="about-box">
+    <h3>medikr 는</h3>
+    <p>일반인이 처방받았거나 복용 중인 의약품 정보를 쉽게 찾을 수 있도록 만든 큐레이션 서비스입니다. 데이터는 <a href="https://www.data.go.kr/" rel="noopener" target="_blank">공공데이터포털</a> 의 식품의약품안전처 OpenAPI 를 통해 매일 06시 자동 갱신됩니다.</p>
+    <p class="caution"><strong>중요</strong>: 본 사이트의 정보는 의료 행위가 아니며, 처방·진단을 대체하지 않습니다. 복용·중단 결정은 반드시 의사·약사와 상의하십시오.</p>
   </section>
 </Layout>
+
+<style>
+  .hero {
+    background:
+      radial-gradient(circle at 80% -10%, rgba(180,83,9,0.15), transparent 50%),
+      linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #fff;
+    padding: 56px 32px 44px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: no-repeat right -40% top 50%/60% url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23ffffff' stroke-width='0.3' opacity='0.05'><circle cx='50' cy='50' r='40'/><circle cx='50' cy='50' r='30'/><circle cx='50' cy='50' r='20'/></svg>");
+    pointer-events: none;
+  }
+  .hero > * { position: relative; }
+  .eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent-light); margin: 0 0 14px;
+  }
+  .hero h1 {
+    font-family: var(--serif); font-weight: 900;
+    font-size: 40px; line-height: 1.25; margin: 0 0 14px;
+    letter-spacing: -0.02em; color: #fff;
+  }
+  .hero .lead {
+    font-size: 16px; opacity: 0.85; margin: 0 0 28px;
+    max-width: 480px; margin-left: auto; margin-right: auto;
+  }
+  .hero-search {
+    display: flex; gap: 0; max-width: 520px; margin: 0 auto;
+    background: #fff; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .hero-search input {
+    flex: 1; padding: 14px 18px; border: 0;
+    font-size: 15px; font-family: var(--sans);
+    color: var(--text); background: transparent;
+  }
+  .hero-search input:focus { outline: none; }
+  .hero-search button {
+    padding: 14px 28px; border: 0;
+    background: var(--accent); color: #fff;
+    font-weight: 700; cursor: pointer; font-size: 14px;
+    letter-spacing: -0.005em; transition: background 0.15s;
+  }
+  .hero-search button:hover { background: #92400e; }
+  .hero-meta {
+    margin: 18px 0 0; font-size: 12px; opacity: 0.6;
+    letter-spacing: 0.04em;
+  }
+
+  .quick-links {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px; margin: 24px 0;
+  }
+  .ql {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 20px 18px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 10px;
+    text-decoration: none; color: var(--text);
+    transition: all 0.2s ease;
+  }
+  .ql:hover {
+    border-color: var(--navy-800); transform: translateY(-3px);
+    box-shadow: var(--shadow-md); text-decoration: none;
+  }
+  .ql-title {
+    font-family: var(--serif); font-weight: 700;
+    color: var(--navy-900); font-size: 17px;
+  }
+  .ql-desc { color: var(--text-muted); font-size: 12.5px; }
+
+  .recent-section { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 28px 0 14px;
+  }
+  .section-head h3 {
+    margin: 0; padding: 0; border: 0; font-size: 20px; font-family: var(--serif);
+  }
+  .see-more {
+    font-size: 13px; color: var(--text-muted); font-weight: 500;
+  }
+  .see-more:hover { color: var(--accent); }
+
+  .drug-grid {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+  }
+  .drug-grid li { margin: 0; }
+  .drug-card {
+    display: flex; flex-direction: column; gap: 3px;
+    padding: 14px 16px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 8px;
+    text-decoration: none; transition: all 0.15s;
+    height: 100%;
+  }
+  .drug-card:hover {
+    border-color: var(--navy-800); transform: translateY(-2px);
+    box-shadow: var(--shadow-sm); text-decoration: none;
+  }
+  .drug-name {
+    color: var(--navy-900); font-weight: 600; font-size: 14px;
+    line-height: 1.4; letter-spacing: -0.005em;
+  }
+  .drug-entp { color: var(--text-muted); font-size: 12px; }
+
+  .about-box {
+    background: var(--bg-muted) !important;
+    border-color: var(--border-strong) !important;
+  }
+  .caution {
+    margin-top: 14px; padding: 12px 16px;
+    background: #fff7ed; border-left: 3px solid var(--accent);
+    border-radius: 4px; font-size: 14px; color: var(--navy-800);
+  }
+  .muted { color: var(--text-light); font-style: italic; }
+
+  @media (max-width: 600px) {
+    .hero { padding: 36px 20px 32px; }
+    .hero h1 { font-size: 28px; }
+    .hero-search { flex-direction: column; gap: 0; }
+    .hero-search button { padding: 12px; }
+    .section-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
+</style>

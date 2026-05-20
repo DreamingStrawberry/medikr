@@ -8,7 +8,6 @@ interface Props {
 const { title, description = '식약처 공식 데이터 기반 의약품 정보 검색', ogImage } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 
-// Analytics & Ads — env vars 가 없으면 코드가 삽입되지 않음 (placeholder pattern)
 const GA4_ID = import.meta.env.PUBLIC_GA4_ID as string | undefined;
 const ADSENSE_CLIENT = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
 const NAVER_SITE_VERIFY = import.meta.env.PUBLIC_NAVER_VERIFY as string | undefined;
@@ -21,6 +20,7 @@ const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | unde
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{title} | medikr — 의약품 정보</title>
   <meta name="description" content={description} />
+  <meta name="theme-color" content="#0f172a" />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
@@ -29,6 +29,10 @@ const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | unde
   {ogImage && <meta property="og:image" content={ogImage} />}
   <meta name="twitter:card" content="summary" />
   <link rel="canonical" href={canonical} />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   {GOOGLE_SITE_VERIFY && <meta name="google-site-verification" content={GOOGLE_SITE_VERIFY} />}
   {NAVER_SITE_VERIFY && <meta name="naver-site-verification" content={NAVER_SITE_VERIFY} />}
@@ -63,69 +67,221 @@ const GOOGLE_SITE_VERIFY = import.meta.env.PUBLIC_GOOGLE_VERIFY as string | unde
       target: { '@type': 'EntryPoint', urlTemplate: 'https://medikr.kr/search?q={q}' },
       'query-input': 'required name=q',
     },
-    publisher: {
-      '@type': 'Organization',
-      name: 'medikr',
-      url: 'https://medikr.kr/',
-    },
+    publisher: { '@type': 'Organization', name: 'medikr', url: 'https://medikr.kr/' },
   })}></script>
 
   <style is:global>
-    :root { color-scheme: light; }
+    :root {
+      color-scheme: light;
+      --navy-900: #0f172a;
+      --navy-800: #1e293b;
+      --navy-700: #334155;
+      --navy-100: #f1f5f9;
+      --accent: #b45309;       /* deep amber */
+      --accent-light: #fcd34d;
+      --bg: #fafaf7;            /* warm off-white */
+      --bg-card: #ffffff;
+      --bg-muted: #f5f5f0;
+      --border: #e7e5e0;
+      --border-strong: #d6d3d1;
+      --text: #1c1917;
+      --text-muted: #57534e;
+      --text-light: #a8a29e;
+      --shadow-sm: 0 1px 2px rgba(15,23,42,0.04), 0 1px 1px rgba(15,23,42,0.02);
+      --shadow-md: 0 4px 12px rgba(15,23,42,0.06), 0 2px 4px rgba(15,23,42,0.03);
+      --shadow-lg: 0 12px 32px rgba(15,23,42,0.08), 0 4px 8px rgba(15,23,42,0.04);
+      --serif: "Noto Serif KR", "Source Serif Pro", Georgia, serif;
+      --sans: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      line-height: 1.6;
-      color: #222;
-      background: #fafafa;
+      font-family: var(--sans);
+      font-feature-settings: "kern", "liga", "calt", "ss01";
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    header {
-      background: #fff;
-      border-bottom: 1px solid #e5e5e5;
-      padding: 12px 16px;
+    a { color: var(--navy-800); text-decoration: none; transition: color 0.15s; }
+    a:hover { color: var(--accent); }
+    code {
+      background: var(--bg-muted); padding: 2px 7px; border-radius: 4px;
+      font-size: 0.88em; font-family: "SF Mono", Menlo, Consolas, monospace;
+      color: var(--navy-700);
     }
-    header h1 { margin: 0; font-size: 20px; }
-    header h1 a { color: #2563eb; text-decoration: none; }
-    header p { margin: 4px 0 0; font-size: 13px; color: #666; }
-    main { max-width: 880px; margin: 0 auto; padding: 16px; }
-    main h2 { font-size: 24px; margin: 16px 0 8px; }
-    main h3 { font-size: 17px; margin: 20px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
-    main img { max-width: 220px; height: auto; border: 1px solid #ddd; border-radius: 6px; margin: 8px 0; }
-    main dl { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; margin: 8px 0; }
-    main dt { font-weight: 600; color: #555; }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    /* ─── Header ───────────────────────────────── */
+    header.site-header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(250,250,247,0.92); backdrop-filter: blur(14px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+    }
+    .site-header-inner {
+      max-width: 1120px; margin: 0 auto;
+      display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    }
+    .site-logo {
+      font-family: var(--serif); font-weight: 900;
+      font-size: 26px; color: var(--navy-900); letter-spacing: -0.02em;
+      text-decoration: none; flex-shrink: 0; line-height: 1;
+      position: relative; padding-bottom: 2px;
+    }
+    .site-logo::after {
+      content: ''; position: absolute; left: 0; bottom: -4px;
+      width: 28px; height: 2px; background: var(--accent);
+    }
+    .site-logo:hover { color: var(--navy-900); }
+
+    .site-nav { display: flex; gap: 2px; flex-wrap: wrap; }
+    .site-nav a {
+      padding: 8px 14px; border-radius: 6px; font-size: 14px;
+      color: var(--navy-700); font-weight: 500; letter-spacing: -0.01em;
+    }
+    .site-nav a:hover { background: var(--navy-100); color: var(--navy-900); }
+
+    .header-search {
+      flex: 1; min-width: 220px; max-width: 380px;
+      position: relative;
+    }
+    .header-search input {
+      width: 100%; padding: 9px 14px 9px 36px;
+      font-size: 14px; font-family: var(--sans);
+      border: 1px solid var(--border-strong);
+      border-radius: 24px; background: var(--bg-card); color: var(--text);
+      transition: all 0.15s;
+    }
+    .header-search input:focus {
+      outline: none; border-color: var(--navy-800);
+      box-shadow: 0 0 0 3px rgba(15,23,42,0.08);
+    }
+    .header-search::before {
+      content: ''; position: absolute; left: 13px; top: 50%;
+      width: 14px; height: 14px; transform: translateY(-50%);
+      background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2.5' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+    }
+
+    /* ─── Main / Typography ───────────────────────── */
+    main { max-width: 880px; margin: 0 auto; padding: 32px 20px 48px; }
+    main h1 {
+      font-family: var(--serif); font-weight: 900;
+      font-size: 36px; margin: 0 0 18px; line-height: 1.2;
+      letter-spacing: -0.02em; color: var(--navy-900);
+    }
+    main h2 {
+      font-family: var(--serif); font-weight: 700;
+      font-size: 28px; margin: 12px 0 14px; line-height: 1.3;
+      letter-spacing: -0.015em; color: var(--navy-900);
+    }
+    main h3 {
+      font-size: 18px; margin: 28px 0 10px; font-weight: 700;
+      letter-spacing: -0.01em; color: var(--navy-900);
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    main h3:first-child { margin-top: 0; }
+    main img {
+      max-width: 280px; height: auto; border: 1px solid var(--border);
+      border-radius: 10px; margin: 12px 0; background: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+    main dl {
+      display: grid; grid-template-columns: 110px 1fr;
+      gap: 8px 18px; margin: 12px 0;
+    }
+    main dt {
+      font-weight: 600; color: var(--text-muted);
+      font-size: 13px; letter-spacing: -0.005em;
+    }
+    main dd { margin: 0; font-size: 15px; color: var(--text); }
     main p { white-space: pre-wrap; }
-    main ul { padding-left: 20px; }
-    main section { background: #fff; padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #eee; }
-    footer {
-      text-align: center;
-      padding: 24px 16px;
-      color: #777;
-      font-size: 13px;
-      border-top: 1px solid #e5e5e5;
-      background: #fff;
+    main section {
+      background: var(--bg-card); padding: 22px 26px;
+      border-radius: 12px; margin-bottom: 14px;
+      border: 1px solid var(--border); box-shadow: var(--shadow-sm);
     }
-    footer p { margin: 4px 0; }
+    main ul { padding-left: 22px; margin: 8px 0; }
+    main li { margin-bottom: 3px; }
+
+    /* ─── Drug list / generic cards ───────────────── */
+    .drug-list { list-style: none; padding: 0; margin: 8px 0; }
+    .drug-list li {
+      padding: 12px 16px; background: var(--bg-card);
+      border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 4px; transition: all 0.15s;
+    }
+    .drug-list li:hover {
+      border-color: var(--navy-800); transform: translateX(2px);
+      box-shadow: var(--shadow-sm);
+    }
+    .drug-list a { color: var(--navy-900); font-weight: 500; }
+    .drug-list .entp {
+      color: var(--text-muted); font-size: 13px; margin-left: 6px;
+    }
+
+    /* ─── Footer ───────────────────────────────────── */
+    footer.site-footer {
+      text-align: center; padding: 40px 20px 32px; margin-top: 40px;
+      color: var(--text-muted); font-size: 13px;
+      border-top: 1px solid var(--border); background: #fff;
+    }
+    .site-footer p { margin: 6px 0; }
+    .footer-links a {
+      color: var(--text-muted); margin: 0 10px;
+      font-weight: 500; font-size: 13px;
+    }
+    .footer-links a:hover { color: var(--navy-900); }
+    .footer-brand {
+      font-family: var(--serif); font-weight: 700; font-size: 18px;
+      color: var(--navy-900); margin-bottom: 8px;
+    }
+
+    @media (max-width: 720px) {
+      .header-search { min-width: 100%; order: 3; }
+      .site-nav { width: 100%; justify-content: space-between; order: 4; }
+      .site-nav a { font-size: 13px; padding: 6px 10px; }
+      main { padding: 20px 16px 40px; }
+      main h1 { font-size: 26px; }
+      main h2 { font-size: 22px; }
+      main dl { grid-template-columns: 80px 1fr; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1><a href="/">medikr</a></h1>
-    <p>식약처 공식 의약품 정보 검색</p>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="/" class="site-logo">medikr</a>
+      <form action="/search" method="get" class="header-search" role="search">
+        <input type="search" name="q" placeholder="약 이름 검색" autocomplete="off" />
+      </form>
+      <nav class="site-nav" aria-label="주요 메뉴">
+        <a href="/search">검색</a>
+        <a href="/모양">모양</a>
+        <a href="/증상">증상</a>
+        <a href="/성분">성분</a>
+        <a href="/분류">분류</a>
+        <a href="/제약사">제약사</a>
+      </nav>
+    </div>
   </header>
   <main>
     <slot />
   </main>
-  <footer>
+  <footer class="site-footer">
+    <p class="footer-brand">medikr</p>
     <p>출처: 식품의약품안전처 공공데이터 (e약은요·DUR·낱알식별·허가정보)</p>
-    <p>정보 제공 목적이며, 복용 전 반드시 의사·약사와 상의하십시오.</p>
-    <p style="margin-top:10px">
-      <a href="/about" style="color:#666;margin:0 8px">운영자</a>·
-      <a href="/privacy" style="color:#666;margin:0 8px">개인정보처리방침</a>·
-      <a href="/terms" style="color:#666;margin:0 8px">이용약관</a>·
-      <a href="/rss.xml" style="color:#666;margin:0 8px">RSS</a>
+    <p>본 사이트는 정보 제공 목적이며, 복용 전 반드시 의사·약사와 상의하십시오.</p>
+    <p class="footer-links">
+      <a href="/about">운영자</a>·
+      <a href="/privacy">개인정보처리방침</a>·
+      <a href="/terms">이용약관</a>·
+      <a href="/rss.xml">RSS</a>
     </p>
-    <p>© 2026 medikr.kr</p>
+    <p style="margin-top:12px;color:var(--text-light)">© 2026 medikr.kr</p>
   </footer>
 </body>
 </html>

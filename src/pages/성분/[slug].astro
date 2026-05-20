@@ -1,0 +1,49 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { prefetchAll, type EasyDrug } from '../../lib/mfds';
+import { slugify } from '../../lib/slugify';
+
+export async function getStaticPaths() {
+  const { drugs, permitMap } = await prefetchAll();
+  const map = new Map<string, EasyDrug[]>();
+  for (const d of drugs) {
+    const permit = permitMap.get(d.itemSeq);
+    if (!permit?.ITEM_INGR_NAME) continue;
+    for (const ing of permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean)) {
+      if (!map.has(ing)) map.set(ing, []);
+      map.get(ing)!.push(d);
+    }
+  }
+  return Array.from(map.entries())
+    .filter(([, list]) => list.length >= 2) // 최소 2개 이상인 성분만
+    .map(([ingredient, list]) => ({
+      params: { slug: slugify(ingredient) },
+      props: { ingredient, drugs: list },
+    }));
+}
+
+interface Props {
+  ingredient: string;
+  drugs: EasyDrug[];
+}
+const { ingredient, drugs } = Astro.props;
+---
+<Layout
+  title={`${ingredient} 성분 의약품`}
+  description={`${ingredient} 성분을 포함한 의약품 ${drugs.length}종 — 식약처 공식 데이터`}
+>
+  <h2>{ingredient}</h2>
+  <p style="color:#666">이 성분을 포함한 의약품 <strong>{drugs.length}종</strong></p>
+
+  <AdSlot slot="3456789012" format="auto" />
+
+  <ul class="drug-list">
+    {drugs.map((d) => (
+      <li>
+        <a href={`/약/${d.itemSeq}`}>{d.itemName}</a>
+        {d.entpName && <span class="entp"> — {d.entpName}</span>}
+      </li>
+    ))}
+  </ul>
+</Layout>

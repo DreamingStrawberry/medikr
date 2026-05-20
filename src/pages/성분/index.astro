@@ -1,0 +1,55 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { prefetchAll } from '../../lib/mfds';
+import { slugify } from '../../lib/slugify';
+
+const { drugs, permitMap } = await prefetchAll();
+const map = new Map<string, number>();
+for (const d of drugs) {
+  const permit = permitMap.get(d.itemSeq);
+  if (!permit?.ITEM_INGR_NAME) continue;
+  for (const ing of permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean)) {
+    map.set(ing, (map.get(ing) ?? 0) + 1);
+  }
+}
+const sorted = Array.from(map.entries())
+  .filter(([, n]) => n >= 2)
+  .sort((a, b) => b[1] - a[1]);
+---
+<Layout title="성분별 의약품 목록" description={`${sorted.length}개 성분으로 분류된 의약품 사전`}>
+  <h2>성분별 의약품</h2>
+  <p>총 <strong>{sorted.length.toLocaleString()}</strong>개 성분 (2개 이상 의약품에 포함된 성분만 표시)</p>
+
+  <div class="ing-grid">
+    {sorted.slice(0, 200).map(([ing, n]) => (
+      <a href={`/성분/${slugify(ing)}`} class="ing-card">
+        <span class="ing-name">{ing}</span>
+        <span class="ing-count">{n}</span>
+      </a>
+    ))}
+  </div>
+  {sorted.length > 200 && <p style="color:#777;margin-top:16px">상위 200개 표시. 전체 {sorted.length.toLocaleString()}개.</p>}
+</Layout>
+
+<style>
+  .ing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .ing-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #222;
+    font-size: 14px;
+  }
+  .ing-card:hover { background: #f5f9ff; border-color: #2563eb; }
+  .ing-count { color: #2563eb; font-weight: 600; font-size: 13px; }
+</style>

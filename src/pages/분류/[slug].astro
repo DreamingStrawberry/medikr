@@ -1,0 +1,48 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { prefetchAll, type EasyDrug } from '../../lib/mfds';
+import { slugify } from '../../lib/slugify';
+
+export async function getStaticPaths() {
+  const { drugs, pillMap } = await prefetchAll();
+  const map = new Map<string, EasyDrug[]>();
+  for (const d of drugs) {
+    const pill = pillMap.get(d.itemSeq);
+    const cls = pill?.CLASS_NAME;
+    if (!cls) continue;
+    if (!map.has(cls)) map.set(cls, []);
+    map.get(cls)!.push(d);
+  }
+  return Array.from(map.entries())
+    .filter(([, list]) => list.length >= 2)
+    .map(([className, list]) => ({
+      params: { slug: slugify(className) },
+      props: { className, drugs: list },
+    }));
+}
+
+interface Props {
+  className: string;
+  drugs: EasyDrug[];
+}
+const { className, drugs } = Astro.props;
+---
+<Layout
+  title={`${className} 의약품`}
+  description={`${className}로 분류된 의약품 ${drugs.length}종`}
+>
+  <h2>{className}</h2>
+  <p style="color:#666">이 약효 분류의 의약품 <strong>{drugs.length}종</strong></p>
+
+  <AdSlot slot="4567890123" format="auto" />
+
+  <ul class="drug-list">
+    {drugs.map((d) => (
+      <li>
+        <a href={`/약/${d.itemSeq}`}>{d.itemName}</a>
+        {d.entpName && <span class="entp"> — {d.entpName}</span>}
+      </li>
+    ))}
+  </ul>
+</Layout>

@@ -1,0 +1,36 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { prefetchAll } from '../../lib/mfds';
+import { slugify } from '../../lib/slugify';
+
+const { drugs, pillMap } = await prefetchAll();
+const map = new Map<string, number>();
+for (const d of drugs) {
+  const pill = pillMap.get(d.itemSeq);
+  if (pill?.CLASS_NAME) map.set(pill.CLASS_NAME, (map.get(pill.CLASS_NAME) ?? 0) + 1);
+}
+const sorted = Array.from(map.entries()).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
+---
+<Layout title="약효 분류별 의약품" description={`${sorted.length}개 약효 분류로 정리한 의약품`}>
+  <h2>약효 분류별 의약품</h2>
+  <p>총 <strong>{sorted.length}</strong>개 분류</p>
+  <ul class="cls-list">
+    {sorted.map(([cls, n]) => (
+      <li>
+        <a href={`/분류/${slugify(cls)}`}>{cls}</a>
+        <span class="cnt">{n}</span>
+      </li>
+    ))}
+  </ul>
+</Layout>
+
+<style>
+  .cls-list { list-style: none; padding: 0; }
+  .cls-list li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; background: #fff; border: 1px solid #eee; border-radius: 4px; margin-bottom: 4px;
+  }
+  .cls-list li:hover { background: #f5f9ff; }
+  .cls-list a { color: #222; text-decoration: none; font-weight: 500; }
+  .cnt { color: #2563eb; font-size: 13px; font-weight: 600; }
+</style>
