@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+import FreshBadge from '../components/FreshBadge.astro';
+import TrustBox from '../components/TrustBox.astro';
+---
+<Layout
+  title="회수·판매중지 정보"
+  description="식약처 공식 식품·의약품 회수 및 판매중지 정보"
+>
+  <nav class="crumb" aria-label="breadcrumb">
+    <a href="/">홈</a> <span>›</span> <span class="cur">회수·판매중지</span>
+  </nav>
+
+  <FreshBadge compact />
+  <h2>회수·판매중지 정보</h2>
+  <p class="meta">식약처가 공시한 식품·의약품·의료기기·화장품의 회수 및 판매중지 정보. 매일 자동 갱신.</p>
+
+  <section class="coming">
+    <h3>데이터 준비 중</h3>
+    <p>식약처 회수·판매중지 OpenAPI 활용신청 후 자동 갱신됩니다.</p>
+    <ul>
+      <li><strong>식품 회수·판매중지</strong> — 제품명·회수 사유·등급·일자</li>
+      <li><strong>수입식품 회수</strong></li>
+      <li><strong>의약품 회수·판매중지</strong></li>
+      <li><strong>해외 위해식품 회수</strong></li>
+    </ul>
+    <p>시기성 콘텐츠 — AI 학습 cutoff 보다 빠른 신선 데이터로 SEO 강점.</p>
+  </section>
+
+  <TrustBox />
+</Layout>
+
+<style>
+  .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; }
+  .crumb a { color: var(--text-muted); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .meta { color: var(--text-muted); margin-bottom: 16px; }
+  .coming { background: var(--bg-muted); border-left: 3px solid var(--navy-900); padding: 20px 24px; border-radius: 8px; }
+  .coming h3 { margin-top: 0; }
+  .coming ul { padding-left: 22px; margin: 12px 0; }
+  .coming li { margin-bottom: 6px; }
+</style>

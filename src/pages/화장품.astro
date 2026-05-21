@@ -1,0 +1,44 @@
+---
+import Layout from '../layouts/Layout.astro';
+import FreshBadge from '../components/FreshBadge.astro';
+import TrustBox from '../components/TrustBox.astro';
+---
+<Layout
+  title="화장품 정보"
+  description="식약처 공식 데이터 기반 화장품 제품·성분 정보. 기능성 화장품·원료성분·안전성 분석"
+>
+  <nav class="crumb" aria-label="breadcrumb">
+    <a href="/">홈</a> <span>›</span> <span class="cur">화장품 정보</span>
+  </nav>
+
+  <FreshBadge compact />
+  <h2>화장품 정보</h2>
+  <p class="meta">식품의약품안전처 공식 화장품 데이터 — 기능성화장품 보고품목, 원료성분, 규제정보.</p>
+
+  <section class="coming">
+    <h3>데이터 준비 중</h3>
+    <p>식약처 화장품 OpenAPI 활용신청 후 자동 갱신됩니다. 일반적으로 다음 분야가 제공됩니다.</p>
+    <ul>
+      <li><strong>기능성 화장품 보고품목</strong> — 미백·주름개선·자외선 차단 등 효능 인정 제품</li>
+      <li><strong>화장품 원료 성분 정보</strong> — 표준명·CAS 번호·기원 및 정의·이명</li>
+      <li><strong>화장품 규제정보</strong> — 사용 제한 원료·금지 국가·제한 국가</li>
+    </ul>
+    <p>예상 페이지 수: 약 10만+</p>
+  </section>
+
+  <TrustBox />
+</Layout>
+
+<style>
+  .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; }
+  .crumb a { color: var(--text-muted); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .meta { color: var(--text-muted); margin-bottom: 16px; }
+  .coming {
+    background: var(--bg-muted); border-left: 3px solid var(--navy-900);
+    padding: 20px 24px; border-radius: 8px;
+  }
+  .coming h3 { margin-top: 0; }
+  .coming ul { padding-left: 22px; margin: 12px 0; }
+  .coming li { margin-bottom: 6px; }
+</style>

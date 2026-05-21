@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+import FreshBadge from '../components/FreshBadge.astro';
+import TrustBox from '../components/TrustBox.astro';
+---
+<Layout
+  title="한약(생약) 정보"
+  description="식약처 공식 한약·생약 약재 정보"
+>
+  <nav class="crumb" aria-label="breadcrumb">
+    <a href="/">홈</a> <span>›</span> <span class="cur">한약(생약)</span>
+  </nav>
+
+  <FreshBadge compact />
+  <h2>한약(생약) 정보</h2>
+  <p class="meta">식약처 공식 한약·생약 약재 정보 — 기원·효능·주의사항.</p>
+
+  <section class="coming">
+    <h3>데이터 준비 중</h3>
+    <p>식약처 한약(생약) OpenAPI 활용신청 후 자동 갱신됩니다.</p>
+    <ul>
+      <li><strong>약재명 / 학명</strong></li>
+      <li><strong>기원 식물·동물·광물</strong></li>
+      <li><strong>효능군 / 주의사항</strong></li>
+      <li><strong>약전 등재 여부</strong></li>
+    </ul>
+    <p>예상 페이지 수: 약 수천</p>
+  </section>
+
+  <TrustBox />
+</Layout>
+
+<style>
+  .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; }
+  .crumb a { color: var(--text-muted); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .meta { color: var(--text-muted); margin-bottom: 16px; }
+  .coming { background: var(--bg-muted); border-left: 3px solid var(--navy-900); padding: 20px 24px; border-radius: 8px; }
+  .coming h3 { margin-top: 0; }
+  .coming ul { padding-left: 22px; margin: 12px 0; }
+  .coming li { margin-bottom: 6px; }
+</style>
