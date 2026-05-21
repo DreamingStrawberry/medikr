@@ -1,0 +1,2 @@
+# /약/[itemSeq] → /drug/[itemSeq] 301 (한글 path SSR Cloudflare adapter 불가 회피)
+/약/* /drug/:splat 301
