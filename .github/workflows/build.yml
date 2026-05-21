@@ -50,4 +50,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=medikr --branch=main
+          # 한글 commit message → CF API Invalid UTF-8 회피: SHA + dirty 만 전달
+          command: pages deploy dist --project-name=medikr --branch=main --commit-message="${{ github.sha }}"
