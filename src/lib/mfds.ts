@@ -400,10 +400,13 @@ export function prefetchAll(): Promise<PrefetchCache> {
   _prefetch = (async () => {
     console.log('[mfds prefetch] e약은요 + 낱알식별 + 허가정보 다운로드 시작...');
     const t0 = Date.now();
+    // 빌드 timeout (25분) 안 맞추려면 페이지 수 제한 필요
+    // e약은요 50p=5000개 / 낱알 30p=3000개 / 허가 50p=5000개
+    // → 빌드 ~10분 (Cloudflare Pages 25,000 파일 limit 도 충족)
     const [drugs, pills, permits] = await Promise.all([
-      fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList'),
-      fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03'),
-      fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07'),
+      fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 50),
+      fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 30),
+      fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 50),
     ]);
     const drugMap = new Map(drugs.map((d) => [d.itemSeq, d]));
     const pillMap = new Map(pills.map((p) => [p.ITEM_SEQ, p]));
