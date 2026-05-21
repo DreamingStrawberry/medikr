@@ -40,9 +40,9 @@ const totalIngredients = new Set(
 <Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 처방분석·부작용 역검색·임부안전 도구 7종">
   <section class="hero">
     <div class="hero-content">
-      <p class="eyebrow">FOR YOUR SAFE MEDICATION</p>
-      <h1>약 정보, <br />이젠 도구로 찾는다</h1>
-      <p class="lead">식품의약품안전처 공식 데이터 {totalDrugs.toLocaleString()}종 — 처방전 병용금기 자동 검사, 증상으로 의심 약 찾기, 임신·노인 안전 가이드까지.</p>
+      <p class="eyebrow">FOOD &middot; DRUG &middot; COSMETICS &middot; MEDICAL DEVICE</p>
+      <h1>식약처 데이터, <br />하나의 사전으로</h1>
+      <p class="lead">의약품 {totalDrugs.toLocaleString()}종부터 화장품·의료기기·건강기능식품·한약·회수정보까지 — 식품의약품안전처 공식 데이터를 도구·검색·비교로 통합 제공.</p>
 
       <form action="/search" method="get" class="hero-search">
         <input type="search" name="q" placeholder="약 이름·성분·증상으로 검색" autocomplete="off" />
@@ -52,8 +52,8 @@ const totalIngredients = new Set(
       <div class="hero-stats">
         <div><strong>{totalDrugs.toLocaleString()}</strong><span>의약품</span></div>
         <div><strong>{totalIngredients.toLocaleString()}</strong><span>성분</span></div>
-        <div><strong>{withImageCount.toLocaleString()}</strong><span>알약 사진</span></div>
-        <div><strong>7</strong><span>전용 도구</span></div>
+        <div><strong>9+</strong><span>전용 도구</span></div>
+        <div><strong>5</strong><span>카테고리 추가중</span></div>
       </div>
     </div>
     <FreshBadge />
@@ -115,8 +115,8 @@ const totalIngredients = new Set(
 
   <section class="content-section">
     <div class="section-head">
-      <h2>의약품 분류</h2>
-      <span class="section-sub">10,000+ 페이지의 의약품 사전</span>
+      <h2>의약품 카테고리</h2>
+      <span class="section-sub">10,000+ 페이지 의약품 사전</span>
     </div>
     <div class="cat-grid">
       <a href="/search" class="cat-card"><strong>이름으로</strong><span>약 4,757종 검색</span></a>
@@ -125,6 +125,30 @@ const totalIngredients = new Set(
       <a href="/분류" class="cat-card"><strong>약효 분류</strong><span>식약처 표준 분류</span></a>
       <a href="/제약사" class="cat-card"><strong>제약사별</strong><span>제조사로 검색</span></a>
       <a href="/q" class="cat-card"><strong>Q&A</strong><span>자주 묻는 질문 30+</span></a>
+    </div>
+  </section>
+
+  <section class="content-section">
+    <div class="section-head">
+      <h2>다른 식약처 카테고리</h2>
+      <span class="section-sub">의약품 외 4개 분야 통합</span>
+    </div>
+    <div class="cat-grid cat-new">
+      <a href="/화장품" class="cat-card cat-new-item">
+        <strong>화장품</strong><span>기능성·성분·규제정보</span>
+      </a>
+      <a href="/의료기기" class="cat-card cat-new-item">
+        <strong>의료기기</strong><span>품목·허가·등급</span>
+      </a>
+      <a href="/건기식" class="cat-card cat-new-item">
+        <strong>건강기능식품</strong><span>품목·영양·기능성</span>
+      </a>
+      <a href="/한약" class="cat-card cat-new-item">
+        <strong>한약(생약)</strong><span>약재·기원·효능</span>
+      </a>
+      <a href="/회수" class="cat-card cat-new-item cat-fresh">
+        <strong>회수·판매중지</strong><span>식품·의약품 시기성</span>
+      </a>
     </div>
   </section>
 
@@ -303,6 +327,12 @@ const totalIngredients = new Set(
   .cat-card:hover { border-color: var(--navy-800); background: #fafaff; text-decoration: none; }
   .cat-card strong { font-family: var(--serif); color: var(--navy-900); font-size: 15px; }
   .cat-card span { color: var(--text-muted); font-size: 12px; }
+  .cat-new-item {
+    background: linear-gradient(180deg, #fff, #fafaf7);
+    border-left: 3px solid var(--accent);
+  }
+  .cat-new-item:hover { border-left-color: var(--navy-900); }
+  .cat-fresh { background: linear-gradient(180deg, #ecfdf5, #fff); border-left-color: #10b981; }
 
   .drug-grid {
     list-style: none; padding: 0; margin: 0;
