@@ -169,21 +169,37 @@ export async function fetchAll<T>(
   maxPages = 500,
   baseOverride?: string
 ): Promise<T[]> {
-  const all: T[] = [];
   const PER = 100;
-  for (let pageNo = 1; pageNo <= maxPages; pageNo++) {
-    const { items, totalCount } = await fetchApiWithBase<T>(
-      baseOverride ?? BASE,
-      service,
-      endpoint,
-      {
-        ...extra,
-        pageNo: String(pageNo),
-        numOfRows: String(PER),
-      }
+  const base = baseOverride ?? BASE;
+  // 1페이지 먼저 가져와서 totalCount 확인 → 필요 페이지 수 계산
+  const first = await fetchApiWithBase<T>(base, service, endpoint, {
+    ...extra,
+    pageNo: '1',
+    numOfRows: String(PER),
+  });
+  if (first.items.length === 0) return [];
+  const totalPages = Math.min(maxPages, Math.ceil(first.totalCount / PER));
+  if (totalPages <= 1) return first.items;
+  // 나머지 페이지는 8개씩 병렬 fetch
+  const all: T[] = [...first.items];
+  const CONCURRENCY = 8;
+  for (let pageNo = 2; pageNo <= totalPages; pageNo += CONCURRENCY) {
+    const batch = Array.from(
+      { length: Math.min(CONCURRENCY, totalPages - pageNo + 1) },
+      (_, i) => pageNo + i
     );
-    all.push(...items);
-    if (items.length < PER || pageNo * PER >= totalCount) break;
+    const results = await Promise.all(
+      batch.map((pn) =>
+        fetchApiWithBase<T>(base, service, endpoint, {
+          ...extra,
+          pageNo: String(pn),
+          numOfRows: String(PER),
+        })
+      )
+    );
+    for (const r of results) all.push(...r.items);
+    // 한 페이지라도 비면 끝
+    if (results.some((r) => r.items.length < PER)) break;
   }
   return all;
 }
@@ -261,7 +277,7 @@ let _cosmeticCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllCosmetics(): Promise<GenericProduct[]> {
   if (_cosmeticCache) return _cosmeticCache;
   _cosmeticCache = fetchAll<GenericProduct>(
-    'CsmtcsMfcrtrInfoService01', 'getCsmtcsMfcrtrInfoList01', {}, 100
+    'CsmtcsMfcrtrInfoService01', 'getCsmtcsMfcrtrInfoList01', {}, 30
   );
   return _cosmeticCache;
 }
@@ -271,7 +287,7 @@ let _functionalCosmeticCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllFunctionalCosmetics(): Promise<GenericProduct[]> {
   if (_functionalCosmeticCache) return _functionalCosmeticCache;
   _functionalCosmeticCache = fetchAll<GenericProduct>(
-    'FtnltCosmRptPrdlstInfoService', 'getRptPrdlstInq', {}, 50
+    'FtnltCosmRptPrdlstInfoService', 'getRptPrdlstInq', {}, 30
   );
   return _functionalCosmeticCache;
 }
@@ -281,7 +297,7 @@ let _cosmeticIngredientCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllCosmeticIngredients(): Promise<GenericProduct[]> {
   if (_cosmeticIngredientCache) return _cosmeticIngredientCache;
   _cosmeticIngredientCache = fetchAll<GenericProduct>(
-    'CsmtcsIngdCpntInfoService01', 'getCsmtcsIngdCpntInfoService01', {}, 100
+    'CsmtcsIngdCpntInfoService01', 'getCsmtcsIngdCpntInfoService01', {}, 30
   );
   return _cosmeticIngredientCache;
 }
@@ -291,7 +307,7 @@ let _mdCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllMedicalDevices(): Promise<GenericProduct[]> {
   if (_mdCache) return _mdCache;
   _mdCache = fetchAll<GenericProduct>(
-    'MdeqPrdlstInfoService02', 'getMdeqPrdlstInfoInq02', {}, 300
+    'MdeqPrdlstInfoService02', 'getMdeqPrdlstInfoInq02', {}, 50
   );
   return _mdCache;
 }
@@ -300,7 +316,7 @@ export function fetchAllMedicalDevices(): Promise<GenericProduct[]> {
 let _htfsCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllHealthFunctionalFoods(): Promise<GenericProduct[]> {
   if (_htfsCache) return _htfsCache;
-  _htfsCache = fetchAll<GenericProduct>('HtfsInfoService03', 'getHtfsList01', {}, 300);
+  _htfsCache = fetchAll<GenericProduct>('HtfsInfoService03', 'getHtfsList01', {}, 50);
   return _htfsCache;
 }
 
@@ -309,7 +325,7 @@ let _herbalCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllHerbalMedicines(): Promise<GenericProduct[]> {
   if (_herbalCache) return _herbalCache;
   _herbalCache = fetchAll<GenericProduct>(
-    'HerbMdntfService', 'getMdntf', {}, 100,
+    'HerbMdntfService', 'getMdntf', {}, 30,
     'https://apis.data.go.kr/1471057'
   );
   return _herbalCache;
@@ -320,7 +336,7 @@ let _drugRecallCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllDrugRecalls(): Promise<GenericProduct[]> {
   if (_drugRecallCache) return _drugRecallCache;
   _drugRecallCache = fetchAll<GenericProduct>(
-    'MdcinRtrvlSleStpgeInfoService04', 'getMdcinRtrvlSleStpgelList03', {}, 50
+    'MdcinRtrvlSleStpgeInfoService04', 'getMdcinRtrvlSleStpgelList03', {}, 30
   );
   return _drugRecallCache;
 }
@@ -330,24 +346,33 @@ export function fetchAllDrugRecalls(): Promise<GenericProduct[]> {
 // 인증키: 식약처 일반 키와 같은 키 일 수도, 별도 일 수도 (시도 후 확인)
 const FOODSAFETY_BASE = 'http://openapi.foodsafetykorea.go.kr/api';
 
-async function fetchFoodSafetyApi(serviceId: string, perPage = 100, maxPages = 50): Promise<GenericProduct[]> {
+async function fetchFoodSafetyApi(serviceId: string, perPage = 100, maxPages = 20): Promise<GenericProduct[]> {
   if (!HAS_KEY) return [];
   const all: GenericProduct[] = [];
-  for (let page = 0; page < maxPages; page++) {
-    const start = page * perPage + 1;
-    const end = start + perPage - 1;
-    try {
-      const res = await fetch(`${FOODSAFETY_BASE}/${KEY}/${serviceId}/json/${start}/${end}`);
-      if (!res.ok) break;
-      const data = await res.json();
-      const block = data[serviceId];
-      if (!block) break;
-      const rows = block.row;
-      if (!rows || rows.length === 0) break;
+  const CONCURRENCY = 5;
+  let stopped = false;
+  for (let pageStart = 0; pageStart < maxPages && !stopped; pageStart += CONCURRENCY) {
+    const batch = Array.from(
+      { length: Math.min(CONCURRENCY, maxPages - pageStart) },
+      (_, i) => pageStart + i
+    );
+    const results = await Promise.all(
+      batch.map(async (page) => {
+        const start = page * perPage + 1;
+        const end = start + perPage - 1;
+        try {
+          const res = await fetch(`${FOODSAFETY_BASE}/${KEY}/${serviceId}/json/${start}/${end}`);
+          if (!res.ok) return [] as GenericProduct[];
+          const data = await res.json();
+          return (data[serviceId]?.row ?? []) as GenericProduct[];
+        } catch {
+          return [] as GenericProduct[];
+        }
+      })
+    );
+    for (const rows of results) {
       all.push(...rows);
-      if (rows.length < perPage) break;
-    } catch {
-      break;
+      if (rows.length < perPage) stopped = true;
     }
   }
   return all;
@@ -356,7 +381,7 @@ async function fetchFoodSafetyApi(serviceId: string, perPage = 100, maxPages = 5
 let _foodRecallCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllRecalls(): Promise<GenericProduct[]> {
   if (_foodRecallCache) return _foodRecallCache;
-  _foodRecallCache = fetchFoodSafetyApi('I0490', 100, 50);
+  _foodRecallCache = fetchFoodSafetyApi('I0490', 100, 20);
   return _foodRecallCache;
 }
 
@@ -365,7 +390,7 @@ let _foodNutritionCache: Promise<GenericProduct[]> | null = null;
 export function fetchAllFoodNutrition(): Promise<GenericProduct[]> {
   if (_foodNutritionCache) return _foodNutritionCache;
   _foodNutritionCache = fetchAll<GenericProduct>(
-    'FoodNtrCpntDbInfo02', 'getFoodNtrCpntDbInq02', {}, 200
+    'FoodNtrCpntDbInfo02', 'getFoodNtrCpntDbInq02', {}, 30
   );
   return _foodNutritionCache;
 }
