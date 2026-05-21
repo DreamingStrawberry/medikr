@@ -215,6 +215,60 @@ export function fetchAllAgeTaboos(): Promise<DurEntry[]> {
   return _ageCache;
 }
 
+// ─── Phase F: 추가 카테고리 (사용자 endpoint 정확 확인 후 정정 필요) ──
+// TODO: 실제 신청 후 swagger 에서 정확한 service / endpoint 명 확인 → 아래 string 정정
+//       graceful 처리 (fail 시 빈 배열) 이라 빌드는 항상 통과
+
+export type GenericProduct = Record<string, string>;
+
+let _cosmeticCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllCosmetics(): Promise<GenericProduct[]> {
+  if (_cosmeticCache) return _cosmeticCache;
+  // TODO: 15020628 endpoint 정정
+  _cosmeticCache = fetchAll<GenericProduct>('CsmtcsMfcrtrInfoService01', 'getCsmtcsMfcrtrInfoList01', {}, 100);
+  return _cosmeticCache;
+}
+
+let _functionalCosmeticCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllFunctionalCosmetics(): Promise<GenericProduct[]> {
+  if (_functionalCosmeticCache) return _functionalCosmeticCache;
+  // TODO: 15095680 endpoint 정정
+  _functionalCosmeticCache = fetchAll<GenericProduct>('CsmtcsFnctlPrdtInfoService01', 'getCsmtcsFnctlPrdtInfoList01', {}, 50);
+  return _functionalCosmeticCache;
+}
+
+let _mdCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllMedicalDevices(): Promise<GenericProduct[]> {
+  if (_mdCache) return _mdCache;
+  // TODO: 15073906 endpoint 정정
+  _mdCache = fetchAll<GenericProduct>('MdcinInfoService01', 'getMdcinInfoList01', {}, 300);
+  return _mdCache;
+}
+
+let _htfsCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllHealthFunctionalFoods(): Promise<GenericProduct[]> {
+  if (_htfsCache) return _htfsCache;
+  // TODO: 15056760 endpoint 정정
+  _htfsCache = fetchAll<GenericProduct>('HtfsInfoService01', 'getHtfsInfoList01', {}, 300);
+  return _htfsCache;
+}
+
+let _herbalCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllHerbalMedicines(): Promise<GenericProduct[]> {
+  if (_herbalCache) return _herbalCache;
+  // TODO: 15076330 endpoint 정정
+  _herbalCache = fetchAll<GenericProduct>('HrbalMdcnInfoService01', 'getHrbalMdcnInfoList01', {}, 100);
+  return _herbalCache;
+}
+
+let _recallCache: Promise<GenericProduct[]> | null = null;
+export function fetchAllRecalls(): Promise<GenericProduct[]> {
+  if (_recallCache) return _recallCache;
+  // TODO: 15074318 endpoint 정정
+  _recallCache = fetchAll<GenericProduct>('FoodRecallInfoService01', 'getFoodRecallInfoList01', {}, 100);
+  return _recallCache;
+}
+
 export function prefetchAll(): Promise<PrefetchCache> {
   if (_prefetch) return _prefetch;
   _prefetch = (async () => {
