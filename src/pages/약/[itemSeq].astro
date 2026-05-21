@@ -1,98 +1,84 @@
 ---
+// SSR 모드: 5만 약 페이지 매 요청 처리, Cloudflare edge 24h 캐시
+export const prerender = false;
+
 import Layout from '../../layouts/Layout.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import FavoriteButton from '../../components/FavoriteButton.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
-import { prefetchAll, getDurTaboos, type EasyDrug, type PillIdent, type DrugPermit } from '../../lib/mfds';
+import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
 import { QAS } from '../../lib/qa-seed';
 
-export async function getStaticPaths() {
-  const { drugs, pillMap, permitMap } = await prefetchAll();
+// 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천
+import drugNames from '../../data/drug-names.json';
+import ingredientIdx from '../../data/ingredient-idx.json';
+import classIdx from '../../data/class-idx.json';
+import entpIdx from '../../data/entp-idx.json';
 
-  // 사전 색인 — 빌드 시 한 번 만들고 모든 페이지에서 공유
-  const ingredientMap = new Map<string, string[]>();
-  const classMap = new Map<string, string[]>();
-  const entpMap = new Map<string, string[]>();
-  for (const d of drugs) {
-    const permit = permitMap.get(d.itemSeq);
-    if (permit?.ITEM_INGR_NAME) {
-      for (const ing of permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean)) {
-        if (!ingredientMap.has(ing)) ingredientMap.set(ing, []);
-        ingredientMap.get(ing)!.push(d.itemSeq);
-      }
-    }
-    const pill = pillMap.get(d.itemSeq);
-    if (pill?.CLASS_NAME) {
-      if (!classMap.has(pill.CLASS_NAME)) classMap.set(pill.CLASS_NAME, []);
-      classMap.get(pill.CLASS_NAME)!.push(d.itemSeq);
-    }
-    if (d.entpName) {
-      if (!entpMap.has(d.entpName)) entpMap.set(d.entpName, []);
-      entpMap.get(d.entpName)!.push(d.itemSeq);
-    }
-  }
-
-  const byItem = new Map(drugs.map((d) => [d.itemSeq, d]));
-
-  return drugs.map((drug) => {
-    const permit = permitMap.get(drug.itemSeq);
-    const pill = pillMap.get(drug.itemSeq);
-    // 같은 성분 약 5개
-    const sameIngredient: { seq: string; name: string }[] = [];
-    if (permit?.ITEM_INGR_NAME) {
-      for (const ing of permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean)) {
-        const list = ingredientMap.get(ing) ?? [];
-        for (const seq of list) {
-          if (seq === drug.itemSeq) continue;
-          if (sameIngredient.find((x) => x.seq === seq)) continue;
-          const x = byItem.get(seq);
-          if (x) sameIngredient.push({ seq, name: x.itemName });
-          if (sameIngredient.length >= 5) break;
-        }
-        if (sameIngredient.length >= 5) break;
-      }
-    }
-    // 같은 분류 약 5개
-    const sameClass: { seq: string; name: string }[] = [];
-    if (pill?.CLASS_NAME) {
-      const list = classMap.get(pill.CLASS_NAME) ?? [];
-      for (const seq of list) {
-        if (seq === drug.itemSeq) continue;
-        const x = byItem.get(seq);
-        if (x) sameClass.push({ seq, name: x.itemName });
-        if (sameClass.length >= 5) break;
-      }
-    }
-    // 같은 제약사 약 5개
-    const sameEntp: { seq: string; name: string }[] = [];
-    if (drug.entpName) {
-      const list = entpMap.get(drug.entpName) ?? [];
-      for (const seq of list) {
-        if (seq === drug.itemSeq) continue;
-        const x = byItem.get(seq);
-        if (x) sameEntp.push({ seq, name: x.itemName });
-        if (sameEntp.length >= 5) break;
-      }
-    }
-    return {
-      params: { itemSeq: drug.itemSeq },
-      props: { drug, pill, permit, sameIngredient, sameClass, sameEntp },
-    };
-  });
-}
-
-interface Props {
-  drug: EasyDrug;
-  pill: PillIdent | null | undefined;
-  permit: DrugPermit | null | undefined;
-  sameIngredient: { seq: string; name: string }[];
-  sameClass: { seq: string; name: string }[];
-  sameEntp: { seq: string; name: string }[];
-}
-const { drug, pill, permit, sameIngredient, sameClass, sameEntp } = Astro.props;
 const { itemSeq } = Astro.params;
+if (!itemSeq) return Astro.redirect('/search', 302);
 
-const taboos = await getDurTaboos(itemSeq!).catch(() => []);
+// 색인 lookup 우선 — 없는 약이면 즉시 404
+if (!(drugNames as Record<string, string>)[itemSeq]) {
+  return new Response('Not found', { status: 404 });
+}
+
+// 식약처 API 3건 병렬 fetch (cache: edge 24h)
+const [drug, pill, permit, taboos] = await Promise.all([
+  getEasyDrug(itemSeq),
+  getPillIdent(itemSeq),
+  getDrugPermit(itemSeq),
+  getDurTaboos(itemSeq).catch(() => []),
+]);
+
+if (!drug) {
+  return new Response('Drug not found', { status: 404 });
+}
+
+// 같은 성분/분류/제약사 약 5개씩 (색인 lookup → drugNames 룩업)
+const _drugNames = drugNames as Record<string, string>;
+const _ingredientIdx = ingredientIdx as Record<string, string[]>;
+const _classIdx = classIdx as Record<string, string[]>;
+const _entpIdx = entpIdx as Record<string, string[]>;
+
+const sameIngredient: { seq: string; name: string }[] = [];
+if (permit?.ITEM_INGR_NAME) {
+  const ingredients = permit.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean);
+  const seen = new Set<string>();
+  for (const ing of ingredients) {
+    const list = _ingredientIdx[ing] ?? [];
+    for (const seq of list) {
+      if (seq === itemSeq || seen.has(seq)) continue;
+      const name = _drugNames[seq];
+      if (name) { sameIngredient.push({ seq, name }); seen.add(seq); }
+      if (sameIngredient.length >= 5) break;
+    }
+    if (sameIngredient.length >= 5) break;
+  }
+}
+
+const sameClass: { seq: string; name: string }[] = [];
+if (pill?.CLASS_NAME) {
+  for (const seq of _classIdx[pill.CLASS_NAME] ?? []) {
+    if (seq === itemSeq) continue;
+    const name = _drugNames[seq];
+    if (name) sameClass.push({ seq, name });
+    if (sameClass.length >= 5) break;
+  }
+}
+
+const sameEntp: { seq: string; name: string }[] = [];
+if (drug.entpName) {
+  for (const seq of _entpIdx[drug.entpName] ?? []) {
+    if (seq === itemSeq) continue;
+    const name = _drugNames[seq];
+    if (name) sameEntp.push({ seq, name });
+    if (sameEntp.length >= 5) break;
+  }
+}
+
+// Cloudflare edge 캐시 (24h TTL)
+Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800');
 
 // 매칭 Q&A — 약 이름 또는 약효 분류로 관련 Q&A 찾기
 const drugNameLower = drug.itemName.toLowerCase();

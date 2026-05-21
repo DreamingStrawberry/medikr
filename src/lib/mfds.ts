@@ -1,4 +1,8 @@
-const KEY = import.meta.env.MFDS_API_KEY;
+// 환경 dual 지원: Astro/Vite (import.meta.env) + Node tsx (process.env)
+const KEY: string | undefined =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.MFDS_API_KEY) ||
+  (typeof process !== 'undefined' && process.env?.MFDS_API_KEY) ||
+  undefined;
 const BASE = 'https://apis.data.go.kr/1471000';
 const HAS_KEY = Boolean(KEY);
 
@@ -400,13 +404,12 @@ export function prefetchAll(): Promise<PrefetchCache> {
   _prefetch = (async () => {
     console.log('[mfds prefetch] e약은요 + 낱알식별 + 허가정보 다운로드 시작...');
     const t0 = Date.now();
-    // 빌드 timeout (25분) 안 맞추려면 페이지 수 제한 필요
-    // e약은요 50p=5000개 / 낱알 30p=3000개 / 허가 50p=5000개
-    // → 빌드 ~10분 (Cloudflare Pages 25,000 파일 limit 도 충족)
+    // D 옵션 (hybrid SSR) 적용: [itemSeq] 는 SSR 이라 prerender 5만개 안 함
+    // prefetchAll 은 색인용 (성분/분류/제약사 페이지) — 전체 데이터 필요
     const [drugs, pills, permits] = await Promise.all([
-      fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 50),
+      fetchAll<EasyDrug>('DrbEasyDrugInfoService', 'getDrbEasyDrugList', {}, 60),
       fetchAll<PillIdent>('MdcinGrnIdntfcInfoService03', 'getMdcinGrnIdntfcInfoList03', {}, 30),
-      fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 50),
+      fetchAll<DrugPermit>('DrugPrdtPrmsnInfoService07', 'getDrugPrdtPrmsnInq07', {}, 60),
     ]);
     const drugMap = new Map(drugs.map((d) => [d.itemSeq, d]));
     const pillMap = new Map(pills.map((p) => [p.ITEM_SEQ, p]));
