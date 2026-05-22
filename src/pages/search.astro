@@ -19,15 +19,6 @@ const all: SearchItem[] = drugs.map((d) => ({
   </nav>
   <h2>의약품 검색</h2>
   <p class="cnt">총 <strong>{all.length.toLocaleString()}</strong>개 의약품. 이름·업체·성분으로 검색합니다.</p>
-  <nav class="cat-tabs" aria-label="카테고리 전환">
-    <span class="cat-active">의약품</span>
-    <a href="/화장품">화장품</a>
-    <a href="/의료기기">의료기기</a>
-    <a href="/건기식">건기식</a>
-    <a href="/한약">한약</a>
-    <a href="/회수">회수</a>
-  </nav>
-
   <div class="search-bar">
     <input type="search" id="q" placeholder="예: 타이레놀, 동화약품, 아세트아미노펜" autocomplete="off" />
   </div>

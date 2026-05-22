@@ -37,125 +37,34 @@ const totalIngredients = new Set(
   drugs.flatMap((d) => permitMap.get(d.itemSeq)?.ITEM_INGR_NAME?.split('/').map((s) => s.trim()).filter(Boolean) ?? [])
 ).size;
 ---
-<Layout title="홈" description="식약처 공식 데이터 기반 의약품 정보 — 처방분석·부작용 역검색·임부안전 도구 7종">
+<Layout title="식약처 의약품 검색 + 무료 API" description="식약처 공식 의약품 데이터 검색 + 무료 통합 API (5만 약 정보, 인증키 없음, CORS 허용)">
   <section class="hero">
     <div class="hero-content">
-      <p class="eyebrow">FOOD &middot; DRUG &middot; COSMETICS &middot; MEDICAL DEVICE</p>
-      <h1>식약처 데이터, <br />하나의 사전으로</h1>
-      <p class="lead">의약품 {totalDrugs.toLocaleString()}종부터 화장품·의료기기·건강기능식품·한약·회수정보까지 — 식품의약품안전처 공식 데이터를 도구·검색·비교로 통합 제공.</p>
+      <p class="eyebrow">MEDIKR &middot; FREE DRUG DATABASE &middot; API</p>
+      <h1>의약품 검색 +<br />무료 API</h1>
+      <p class="lead">식약처 공식 데이터 {totalDrugs.toLocaleString()}종 의약품. 검색하고 사용하세요. 개발자는 <a href="/api/" style="color:var(--accent-light);text-decoration:underline">무료 API</a> 로.</p>
 
       <form action="/search" method="get" class="hero-search">
-        <input type="search" name="q" placeholder="약 이름·성분·증상으로 검색" autocomplete="off" />
+        <input type="search" name="q" placeholder="약 이름·제약사 검색" autocomplete="off" />
         <button type="submit" aria-label="검색">검색</button>
       </form>
 
       <div class="hero-stats">
         <div><strong>{totalDrugs.toLocaleString()}</strong><span>의약품</span></div>
         <div><strong>{totalIngredients.toLocaleString()}</strong><span>성분</span></div>
-        <div><strong>9+</strong><span>전용 도구</span></div>
-        <div><strong>5</strong><span>카테고리 추가중</span></div>
+        <div><strong>6</strong><span>API endpoint</span></div>
+        <div><strong>0원</strong><span>무료 사용</span></div>
       </div>
     </div>
     <FreshBadge />
-  </section>
-
-  <section class="tool-section">
-    <div class="section-head">
-      <h2>전용 도구</h2>
-      <span class="section-sub">AI 가 못 대체하는 정확 데이터·인터랙티브</span>
-    </div>
-    <div class="tools-grid">
-      <a href="/처방분석" class="tool-card tool-feature">
-        <div class="tool-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7"/><path d="M9 7H5a2 2 0 0 0-2 2v2"/><circle cx="14" cy="11" r="6"/><path d="M14 11v3"/><path d="M14 8h.01"/></svg>
-        </div>
-        <strong>처방전 분석</strong>
-        <p>여러 약을 한 번에 입력하면 식약처 DUR 80만건 데이터에서 병용금기·상호작용 자동 검사</p>
-        <span class="tool-badge">대표 도구</span>
-      </a>
-      <a href="/부작용검색" class="tool-card">
-        <div class="tool-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v3M11 14h.01"/></svg>
-        </div>
-        <strong>부작용 역검색</strong>
-        <p>의심 증상으로 부작용 등록된 약 찾기</p>
-      </a>
-      <a href="/모양" class="tool-card">
-        <div class="tool-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
-        </div>
-        <strong>알약 식별</strong>
-        <p>모양·색·식별표기로 처방받은 약 찾기</p>
-      </a>
-      <a href="/비교" class="tool-card">
-        <div class="tool-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
-        </div>
-        <strong>약 비교</strong>
-        <p>두 의약품 효능·부작용·성분 sideway 비교</p>
-      </a>
-      <a href="/임부안전" class="tool-card">
-        <div class="tool-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 0 0 0-18 9 9 0 0 0 0 18z"/><circle cx="12" cy="11" r="3"/></svg>
-        </div>
-        <strong>임부 금기</strong>
-        <p>임신·수유 중 절대 금기 약</p>
-      </a>
-      <a href="/노인주의" class="tool-card">
-        <div class="tool-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/><circle cx="12" cy="12" r="10"/></svg>
-        </div>
-        <strong>노인 주의</strong>
-        <p>고령자 신중 복용 의약품</p>
-      </a>
-    </div>
   </section>
 
   <AdSlot slot="9123450001" format="auto" />
 
   <section class="content-section">
     <div class="section-head">
-      <h2>의약품 카테고리</h2>
-      <span class="section-sub">10,000+ 페이지 의약품 사전</span>
-    </div>
-    <div class="cat-grid">
-      <a href="/search" class="cat-card"><strong>이름으로</strong><span>약 4,757종 검색</span></a>
-      <a href="/증상" class="cat-card"><strong>증상별</strong><span>감기·두통·소화 등 20개</span></a>
-      <a href="/성분" class="cat-card"><strong>성분별</strong><span>주성분으로 묶음</span></a>
-      <a href="/분류" class="cat-card"><strong>약효 분류</strong><span>식약처 표준 분류</span></a>
-      <a href="/제약사" class="cat-card"><strong>제약사별</strong><span>제조사로 검색</span></a>
-      <a href="/q" class="cat-card"><strong>Q&A</strong><span>자주 묻는 질문 30+</span></a>
-    </div>
-  </section>
-
-  <section class="content-section">
-    <div class="section-head">
-      <h2>다른 식약처 카테고리</h2>
-      <span class="section-sub">의약품 외 4개 분야 통합</span>
-    </div>
-    <div class="cat-grid cat-new">
-      <a href="/화장품" class="cat-card cat-new-item">
-        <strong>화장품</strong><span>기능성·성분·규제정보</span>
-      </a>
-      <a href="/의료기기" class="cat-card cat-new-item">
-        <strong>의료기기</strong><span>품목·허가·등급</span>
-      </a>
-      <a href="/건기식" class="cat-card cat-new-item">
-        <strong>건강기능식품</strong><span>품목·영양·기능성</span>
-      </a>
-      <a href="/한약" class="cat-card cat-new-item">
-        <strong>한약(생약)</strong><span>약재·기원·효능</span>
-      </a>
-      <a href="/회수" class="cat-card cat-new-item cat-fresh">
-        <strong>회수·판매중지</strong><span>식품·의약품 시기성</span>
-      </a>
-    </div>
-  </section>
-
-  <section class="content-section">
-    <div class="section-head">
       <h2>최근 허가 의약품</h2>
-      <a href="/search" class="see-more">전체 보기 →</a>
+      <a href="/search" class="see-more">전체 검색 →</a>
     </div>
     {recent.length > 0 ? (
       <ul class="drug-grid">

@@ -7,7 +7,6 @@ import AdSlot from '../../components/AdSlot.astro';
 import FavoriteButton from '../../components/FavoriteButton.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
-import { QAS } from '../../lib/qa-seed';
 
 // 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천
 import drugNames from '../../data/drug-names.json';
@@ -74,19 +73,6 @@ if (drug.entpName) {
 
 // Cloudflare edge 캐시 (24h TTL)
 Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800');
-
-// 매칭 Q&A — 약 이름 또는 약효 분류로 관련 Q&A 찾기
-const drugNameLower = drug.itemName.toLowerCase();
-const className = pill?.CLASS_NAME ?? '';
-const ingredient = permit?.ITEM_INGR_NAME ?? '';
-const matchedQas = QAS.filter((qa) => {
-  if (qa.related?.some((k) => drugNameLower.includes(k.toLowerCase()) || ingredient.toLowerCase().includes(k.toLowerCase()))) return true;
-  if (qa.category === '진통제' && (className.includes('진통') || className.includes('해열'))) return true;
-  if (qa.category === '감기' && (className.includes('감기') || className.includes('해열') || className.includes('진해'))) return true;
-  if (qa.category === '항생제' && className.includes('항생')) return true;
-  if (qa.category === '안전' || qa.category === '복용법' || qa.category === '보관') return true;
-  return false;
-}).slice(0, 4);
 
 // 약 사진 fallback: e약은요 itemImage > 낱알식별 ITEM_IMAGE > 식약처 nedrug 직접 URL
 function buildNedrugImageUrl(itemSeq: string): string {
@@ -204,7 +190,6 @@ const drugJsonLd = {
           ))}
         </ul>
         {taboos.length > 10 && <p style="color:var(--text-muted);font-size:13px">외 {taboos.length - 10}건</p>}
-        <p class="link-row"><a href={`/처방분석`}>이 약과 함께 먹는 약 검사하기 →</a></p>
       </section>
     )}
 
@@ -217,20 +202,6 @@ const drugJsonLd = {
           {permit.PRDUCT_TYPE && (<><dt>제품 유형</dt><dd>{permit.PRDUCT_TYPE}</dd></>)}
           {permit.ITEM_INGR_NAME && (<><dt>주성분</dt><dd>{permit.ITEM_INGR_NAME}</dd></>)}
         </dl>
-      </section>
-    )}
-
-    {matchedQas.length > 0 && (
-      <section class="qa-match">
-        <h3>이 약 관련 자주 묻는 질문</h3>
-        <ul class="qa-list">
-          {matchedQas.map((qa) => (
-            <li>
-              <a href={`/q/${qa.slug}`}><strong>{qa.q}</strong></a>
-              <p>{qa.a.slice(0, 100).replace(/\n/g, ' ')}…</p>
-            </li>
-          ))}
-        </ul>
       </section>
     )}
 

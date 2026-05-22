@@ -321,16 +321,8 @@ const COUPANG_ID = import.meta.env.PUBLIC_COUPANG_PARTNERS_ID as string | undefi
         <ul id="hdr-sug" class="hdr-sug" hidden></ul>
       </form>
       <nav class="site-nav" id="site-nav" aria-label="주요 메뉴">
-        <a href="/처방분석" class={`nav-highlight${isActive('/처방분석')}`}>처방분석</a>
-        <a href="/부작용검색" class={isActive('/부작용검색').trim()}>부작용</a>
-        <a href="/모양" class={isActive('/모양').trim()}>알약</a>
-        <a href="/증상" class={isActive('/증상').trim()}>증상</a>
-        <a href="/화장품" class={isActive('/화장품').trim()}>화장품</a>
-        <a href="/건기식" class={isActive('/건기식').trim()}>건기식</a>
-        <a href="/의료기기" class={isActive('/의료기기').trim()}>의료기기</a>
-        <a href="/회수" class={isActive('/회수').trim()}>회수</a>
-        <a href="/q" class={isActive('/q').trim()}>Q&A</a>
-        <a href="/api" class={isActive('/api').trim()}>API</a>
+        <a href="/search" class={isActive('/search').trim()}>약 검색</a>
+        <a href="/api" class={`nav-highlight${isActive('/api')}`}>API</a>
       </nav>
     </div>
   </header>
