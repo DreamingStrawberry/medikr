@@ -46,6 +46,24 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      - name: Apply D1 migrations (idempotent — CREATE IF NOT EXISTS)
+        if: github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 execute medikr-analytics --remote --file=migrations/0001_visits.sql
+
+      - name: Register D1 binding to Pages project
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          curl -X PATCH "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/medikr" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"deployment_configs":{"production":{"d1_databases":{"DB":{"id":"e5e3974c-98ae-45a0-bbaa-e37a9043dfbe"}}}}}'
+
       - name: Deploy to Cloudflare Pages
         if: github.ref == 'refs/heads/main'
         uses: cloudflare/wrangler-action@v3

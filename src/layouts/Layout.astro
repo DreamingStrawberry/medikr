@@ -397,10 +397,25 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
       const days = Math.floor((Date.now() - start.getTime()) / 86_400_000);
       return (
         <p style="margin-top:12px;color:var(--text-light)">
-          Since 2026-05-19 · 운영 {days}일째 · © 2026 medikr.kr
+          Since 2026-05-19 · 운영 {days}일째 · 오늘 <span id="stats-today">…</span>명 · 누적 <span id="stats-total">…</span>회 · © 2026 medikr.kr
         </p>
       );
     })()}
   </footer>
+  <script set:html={`
+    (function() {
+      fetch('/api/stats.json').then(r => r.json()).then(d => {
+        var t = document.getElementById('stats-today');
+        var n = document.getElementById('stats-total');
+        if (t) t.textContent = (d.today ?? 0).toLocaleString();
+        if (n) n.textContent = (d.total ?? 0).toLocaleString();
+      }).catch(function(){
+        var t = document.getElementById('stats-today');
+        var n = document.getElementById('stats-total');
+        if (t) t.textContent = '—';
+        if (n) n.textContent = '—';
+      });
+    })();
+  `} />
 </body>
 </html>

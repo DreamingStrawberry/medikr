@@ -1,0 +1,10 @@
+# Cloudflare Pages + D1 binding
+# Astro @astrojs/cloudflare adapter 가 Astro.locals.runtime.env.DB 로 노출
+name = "medikr"
+compatibility_date = "2026-05-22"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "medikr-analytics"
+database_id = "e5e3974c-98ae-45a0-bbaa-e37a9043dfbe"
