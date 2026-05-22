@@ -5,6 +5,8 @@ import FreshBadge from '../components/FreshBadge.astro';
 import TrustBox from '../components/TrustBox.astro';
 import { prefetchAll } from '../lib/mfds';
 import recentPermitsRaw from '../data/recent-permits.json';
+import drugNamesRaw from '../data/drug-names.json';
+import ingredientIdxRaw from '../data/ingredient-idx.json';
 
 const { drugs, permitMap, pillMap } = await prefetchAll();
 
@@ -30,12 +32,10 @@ function relativeDate(d: string): string {
   return `${Math.floor(days / 365)}년 전`;
 }
 
-// 통계
-const totalDrugs = drugs.length;
+// 통계 — prefetchAll() 은 500 약 limit, 실제 5만 약은 build-index.ts 색인 사용
+const totalDrugs = Object.keys(drugNamesRaw as Record<string, string>).length;
+const totalIngredients = Object.keys(ingredientIdxRaw as Record<string, string[]>).length;
 const withImageCount = drugs.filter((d) => d.itemImage || pillMap.get(d.itemSeq)?.ITEM_IMAGE).length;
-const totalIngredients = new Set(
-  drugs.flatMap((d) => permitMap.get(d.itemSeq)?.ITEM_INGR_NAME?.split('/').map((s) => s.trim()).filter(Boolean) ?? [])
-).size;
 ---
 <Layout title="식약처 의약품 검색 + 무료 API" description="식약처 공식 의약품 데이터 검색 + 무료 통합 API (5만 약 정보, 인증키 없음, CORS 허용)">
   <section class="hero">
