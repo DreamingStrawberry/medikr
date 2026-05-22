@@ -92,20 +92,30 @@ const breadcrumbList = {
     { '@type': 'ListItem', position: 3, name: drug.itemName, item: new URL(Astro.url.pathname, Astro.site).href },
   ],
 };
-const drugJsonLd = {
+// Article schema — 의약품 정보 페이지 (Drug schema 는 Google 이 Product snippet 처리
+// → offers/review/aggregateRating 필수, medikr 는 판매/리뷰 X → Article 로 변경)
+const articleJsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'Drug',
-  name: drug.itemName,
-  manufacturer: drug.entpName ? { '@type': 'Organization', name: drug.entpName } : undefined,
-  description: drug.efcyQesitm,
-  image: imageSrc,
-  url: new URL(Astro.url.pathname, Astro.site).href,
-  activeIngredient: permit?.ITEM_INGR_NAME,
-  prescriptionStatus: permit?.SPCLTY_PBLC,
+  '@type': 'Article',
+  headline: drug.itemName,
+  description: drug.efcyQesitm ?? metaDesc,
+  image: imageSrc ? [imageSrc] : undefined,
+  author: { '@type': 'Organization', name: 'medikr' },
+  publisher: {
+    '@type': 'Organization',
+    name: 'medikr',
+    url: 'https://medikr.kr/',
+  },
+  mainEntityOfPage: new URL(Astro.url.pathname, Astro.site).href,
+  about: {
+    '@type': 'MedicalEntity',
+    name: drug.itemName,
+    ...(permit?.ITEM_INGR_NAME && { code: { '@type': 'MedicalCode', code: permit.ITEM_INGR_NAME } }),
+  },
 };
 ---
 <Layout title={drug.itemName} description={metaDesc} ogImage={imageSrc}>
-  <script type="application/ld+json" set:html={JSON.stringify(drugJsonLd)} />
+  <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbList)} />
 
   <nav class="crumb" aria-label="breadcrumb">
