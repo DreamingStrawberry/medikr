@@ -1,0 +1,191 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdSlot from '../../components/AdSlot.astro';
+
+const endpoints = [
+  {
+    path: '/api/drug/{itemSeq}.json',
+    desc: '의약품 통합 정보 (e약은요 + 낱알식별 + 허가정보 합쳐서 JSON 한 번에)',
+    example: '/api/drug/195700020.json',
+    response: `{
+  "s": "195700020",
+  "n": "활명수",
+  "e": "동화약품(주)",
+  "efcy": "이 약은 식욕감퇴, 위부팽만감 등에 사용",
+  "use": "성인 1회 1병...",
+  "atpn": "주의사항...",
+  "se": "부작용...",
+  "image": "https://nedrug.mfds.go.kr/...",
+  "shape": "원형", "color": "...",
+  "cls": "위장운동조절제",
+  "etc": "일반의약품",
+  "ing": "활성성분...",
+  "permit": "19560604"
+}`,
+  },
+  {
+    path: '/api/dur/{itemSeq}.json',
+    desc: '의약품안전사용서비스(DUR) 병용금기 — 같이 먹으면 안 되는 약 list',
+    example: '/api/dur/195700020.json',
+    response: `[
+  {
+    "seq": "199301234",
+    "name": "병용금기 약 이름",
+    "reason": "...",
+    "ingredient": "..."
+  }
+]`,
+  },
+  {
+    path: '/api/search.json?q={keyword}&limit=20',
+    desc: '약 이름 / 제약사 partial match 검색 (5만 약 색인)',
+    example: '/api/search.json?q=타이레놀&limit=10',
+    response: `{
+  "q": "타이레놀",
+  "total": 8,
+  "results": [
+    {"seq":"196300012","name":"타이레놀","entp":"한국얀센"}
+  ]
+}`,
+  },
+  {
+    path: '/api/recent.json?limit=20',
+    desc: '최근 허가 의약품 (5만 약 ITEM_PERMIT_DATE desc top 100)',
+    example: '/api/recent.json?limit=5',
+    response: `{
+  "total": 5,
+  "results": [
+    {"seq":"...","name":"...","entp":"...","date":"20260522"}
+  ]
+}`,
+  },
+  {
+    path: '/api/recall.json?type=food|drug|all&limit=50',
+    desc: '식품 + 의약품 회수·판매중지 정보',
+    example: '/api/recall.json?type=drug&limit=10',
+    response: `{
+  "type": "drug",
+  "total": 10,
+  "results": [
+    {"name":"...","company":"...","reason":"...","date":"...","grade":"..."}
+  ]
+}`,
+  },
+  {
+    path: '/api/drug-index.json',
+    desc: '약 검색 색인 (e약은요 4,757건 — bulk download 용, 1MB)',
+    example: '/api/drug-index.json',
+    response: `[{"s":"195700020","n":"활명수","e":"동화약품(주)"}, ...]`,
+  },
+];
+---
+<Layout title="medikr API — 식약처 데이터 무료 통합 API" description="처방분석·약 검색·회수정보 등 식약처 OpenAPI 를 한 번의 호출로 — 인증키 없음, CORS 허용, 무료, 무제한">
+  <nav class="crumb" aria-label="breadcrumb">
+    <a href="/">홈</a> <span>›</span> <span class="cur">API</span>
+  </nav>
+
+  <header class="api-hero">
+    <h1>medikr API</h1>
+    <p class="lead">식약처 OpenAPI 6종 (e약은요 · 낱알식별 · 허가정보 · DUR · 회수 · 카테고리) 을 통합한 무료 JSON API.</p>
+    <ul class="api-features">
+      <li>인증키 <strong>불필요</strong></li>
+      <li>CORS <strong>전체 허용</strong> (모든 도메인)</li>
+      <li>Cloudflare edge cache <strong>24h</strong></li>
+      <li>무료 / 무제한 (Fair use)</li>
+      <li>응답 schema 통일 / camelCase</li>
+    </ul>
+  </header>
+
+  <AdSlot slot="9000000010" format="auto" />
+
+  <section>
+    <h2>Endpoints</h2>
+    {endpoints.map((e) => (
+      <article class="ep">
+        <h3><code>{e.path}</code></h3>
+        <p>{e.desc}</p>
+        <div class="ep-example">
+          <strong>Example:</strong>
+          <a href={e.example} target="_blank" rel="noopener"><code>{e.example}</code></a>
+        </div>
+        <pre><code>{e.response}</code></pre>
+      </article>
+    ))}
+  </section>
+
+  <section>
+    <h2>사용 예시</h2>
+
+    <h3>JavaScript (브라우저 / Node)</h3>
+    <pre><code>{`fetch('https://medikr.kr/api/drug/195700020.json')
+  .then(r => r.json())
+  .then(drug => console.log(drug.n, drug.efcy));`}</code></pre>
+
+    <h3>Python</h3>
+    <pre><code>{`import requests
+r = requests.get('https://medikr.kr/api/search.json',
+                 params={'q': '타이레놀', 'limit': 5})
+for d in r.json()['results']:
+    print(d['seq'], d['name'])`}</code></pre>
+
+    <h3>cURL</h3>
+    <pre><code>{`curl 'https://medikr.kr/api/recent.json?limit=3'`}</code></pre>
+  </section>
+
+  <AdSlot slot="9000000011" format="auto" />
+
+  <section>
+    <h2>이용 조건 (Fair use)</h2>
+    <ul>
+      <li>인증키 없이 자유 사용</li>
+      <li>edge cache 가 식약처 API 보호 — 정상 사용 시 rate limit 없음</li>
+      <li>출처 표시 권장: <code>data from medikr.kr (식약처 OpenAPI)</code></li>
+      <li>의료 결정 책임은 사용자에게. medikr.kr 는 데이터 정확성 보장하지 않음 (식약처 공시 그대로)</li>
+      <li>남용 (분당 1000+ 호출 등) 시 IP 차단 가능</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>왜 medikr API 인가</h2>
+    <table class="compare">
+      <thead><tr><th>항목</th><th>식약처 직접</th><th>medikr API</th></tr></thead>
+      <tbody>
+        <tr><td>인증키 발급</td><td>data.go.kr 가입 + 신청 + 1~3일 대기</td><td>불필요</td></tr>
+        <tr><td>Rate limit</td><td>일 1,000 (무료)</td><td>Cloudflare edge cache 로 사실상 무제한</td></tr>
+        <tr><td>응답 schema</td><td>API 마다 camelCase / SNAKE_CASE 혼재</td><td>통일된 camelCase</td></tr>
+        <tr><td>여러 API join</td><td>본인이 직접 (e약은요 + 낱알 + 허가)</td><td>1번 호출로 통합 응답</td></tr>
+        <tr><td>CORS</td><td>일부 endpoint 미지원</td><td>전체 허용</td></tr>
+      </tbody>
+    </table>
+  </section>
+</Layout>
+
+<style>
+  .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 6px; }
+  .crumb a { color: var(--text-muted); }
+  .crumb .cur { color: var(--navy-900); font-weight: 600; }
+  .api-hero { background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #fff; padding: 40px 32px; border-radius: 12px; margin-bottom: 24px; }
+  .api-hero h1 { color: #fff; font-size: 36px; margin: 0 0 12px; }
+  .api-hero .lead { font-size: 16px; opacity: 0.9; margin-bottom: 20px; }
+  .api-features { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 16px; margin: 0; }
+  .api-features li { background: rgba(255,255,255,0.12); padding: 8px 14px; border-radius: 6px; font-size: 14px; }
+  .api-features strong { color: #fbbf24; font-weight: 700; }
+
+  section { margin-top: 32px; }
+  section h2 { color: var(--navy-900); border-bottom: 2px solid var(--navy-900); padding-bottom: 6px; margin-bottom: 16px; }
+  section h3 { color: var(--navy-900); margin-top: 24px; }
+
+  .ep { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 16px; }
+  .ep h3 { margin-top: 0; font-size: 16px; }
+  .ep h3 code { font-size: 15px; background: var(--navy-900); color: #fbbf24; padding: 4px 8px; border-radius: 4px; }
+  .ep-example { background: #f8fafc; padding: 8px 12px; border-radius: 4px; margin: 12px 0; font-size: 13px; }
+  .ep-example a { color: var(--accent); }
+
+  pre { background: #1e293b; color: #f1f5f9; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; color: inherit; padding: 0; }
+  code { background: #f1f5f9; color: var(--navy-900); padding: 2px 6px; border-radius: 3px; font-size: 13px; font-family: 'SF Mono', monospace; }
+
+  .compare { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .compare th, .compare td { padding: 10px 14px; text-align: left; border: 1px solid var(--border); font-size: 14px; }
+  .compare th { background: var(--bg-muted); font-weight: 700; color: var(--navy-900); }
+</style>

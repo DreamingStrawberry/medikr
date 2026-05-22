@@ -1,9 +1,12 @@
 import type { APIRoute } from 'astro';
 import { getEasyDrug, getPillIdent, getDrugPermit } from '../../../lib/mfds';
+import { jsonResponse, corsHeaders } from '../../../lib/api-cors';
 
 // SSR endpoint — 매 요청 식약처 API 호출 + 24h 캐시
 // (prerender 안 함: 5만 약 prerender 시 빌드 timeout)
 export const prerender = false;
+
+export const OPTIONS: APIRoute = () => new Response(null, { headers: corsHeaders });
 
 export const GET: APIRoute = async ({ params }) => {
   const seq = params.itemSeq!;
@@ -32,10 +35,5 @@ export const GET: APIRoute = async ({ params }) => {
     ing: pm?.ITEM_INGR_NAME ?? '',
     permit: pm?.ITEM_PERMIT_DATE ?? '',
   };
-  return new Response(JSON.stringify(payload), {
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'public, max-age=86400, s-maxage=86400',
-    },
-  });
+  return jsonResponse(payload);
 };
