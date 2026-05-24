@@ -245,7 +245,9 @@ const CF_ANALYTICS_TOKEN = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN as string |
       font-size: 13px; letter-spacing: -0.005em;
     }
     main dd { margin: 0; font-size: 15px; color: var(--text); }
-    main p { white-space: pre-wrap; }
+    main p { white-space: pre-wrap; line-height: 1.6; margin: 8px 0; }
+    main section p:last-child { margin-bottom: 0; }
+    main section h3 + p { margin-top: 4px; }
     main section {
       background: var(--bg-card); padding: 22px 26px;
       border-radius: 12px; margin-bottom: 14px;
