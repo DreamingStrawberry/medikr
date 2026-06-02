@@ -17,12 +17,17 @@ const env = (Astro.locals as any).runtime?.env;
 const DB = env?.DB;
 
 // 약 상세 — D1 조회(ms). 식약처 API(3-7s)를 빌드 시 적재한 tb_drug_cache 로 대체.
-// D1 미적재/로컬이면 식약처 API fallback (안전망).
 let row: any = null;
+let dbError = false;
 if (DB) {
   try {
     row = await DB.prepare('SELECT * FROM tb_drug_cache WHERE item_seq = ?').bind(itemSeq).first();
-  } catch { row = null; }
+  } catch { dbError = true; }
+}
+// D1 정상인데 row 없음 = 잘못된 itemSeq → 즉시 404 (D1 은 INSERT OR REPLACE 라 항상 데이터 보유).
+// D1 에러 또는 로컬(바인딩 없음)일 때만 식약처 API fallback (안전망).
+if (!row && DB && !dbError) {
+  return new Response('Drug not found', { status: 404 });
 }
 if (!row) {
   const [d, p, pm] = await Promise.all([
