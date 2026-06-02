@@ -9,8 +9,8 @@ import ShareButtons from '../../components/ShareButtons.astro';
 import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
 
 // 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천 + permit-only 약 fallback
+// permit-meta(7.5MB)는 정적 import 하면 매 요청 파싱으로 4s+ 느려져서, permit-only 약일 때만 dynamic import
 import drugNames from '../../data/drug-names.json';
-import permitMetaIdx from '../../data/permit-meta.json';
 import ingredientIdx from '../../data/ingredient-idx.json';
 import classIdx from '../../data/class-idx.json';
 import entpIdx from '../../data/entp-idx.json';
@@ -29,13 +29,19 @@ const [drugRaw, pill, permit, taboos] = await Promise.all([
 // 색인 lookup — 식약처 허가 API 가 단건 조회 불가(필터 무시)라 permit-only 약은 색인으로 보강
 type PermitMeta = { e: string; d: string; i: string; s: string; t: string; no: string };
 const _allNames = drugNames as Record<string, string>;
-const _permitMeta = permitMetaIdx as Record<string, PermitMeta>;
 const indexName = _allNames[itemSeq];
-const meta = _permitMeta[itemSeq];
 
-// 유효성: 단건 API 매칭 OR 색인에 존재. 둘 다 없으면 진짜 404 (잘못된 itemSeq).
-if (!drugRaw && !permit && !pill && !indexName && !meta) {
+// 유효성: 단건 API 매칭 OR 색인(drug-names)에 존재. 둘 다 없으면 진짜 404 (잘못된 itemSeq).
+if (!drugRaw && !permit && !pill && !indexName) {
   return new Response('Drug not found', { status: 404 });
+}
+
+// permit-meta(7.5MB)는 e약은요·permit 단건 둘 다 없는 permit-only 약일 때만 dynamic import
+// (e약은요 약은 이 거대 색인을 파싱하지 않아 응답 빠름)
+let meta: PermitMeta | undefined;
+if (!drugRaw && !permit) {
+  const mod = await import('../../data/permit-meta.json');
+  meta = (mod.default as Record<string, PermitMeta>)[itemSeq];
 }
 
 // e약은요 없으면 permit/pill/색인 으로 fallback drug 객체 생성 (효능 등 텍스트는 빈 값)
