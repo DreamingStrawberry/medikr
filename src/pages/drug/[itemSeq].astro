@@ -6,7 +6,7 @@ import Layout from '../../layouts/Layout.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import FavoriteButton from '../../components/FavoriteButton.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
-import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
+import { getEasyDrug, getPillIdent, getDrugPermit } from '../../lib/mfds';
 // 성분 관련약 색인 (작음 0.4MB). 이름/상세/업체·분류 관련약은 D1(tb_drug_cache)에서 조회.
 import ingredientIdx from '../../data/ingredient-idx.json';
 
@@ -65,8 +65,7 @@ const permitInfo = (row.permit_date || row.spclty || row.ingr_name || row.prmisn
   PRDUCT_PRMISN_NO: row.prmisn_no, ITEM_INGR_NAME: row.ingr_name, ITEM_ENG_NAME: row.eng_name,
 } as any : null;
 
-// 병용금기 (DUR) — 식약처 API (D1 미적재). 느리면 빈 배열로 graceful.
-const taboos = await getDurTaboos(itemSeq).catch(() => []);
+// 병용금기 (DUR) — 식약처 API 가 느려(3-5s) SSR 을 막으므로 client-side(/api/dur.json)로 분리.
 
 // 관련약 — 같은 업체/분류는 D1 인덱스 쿼리, 같은 성분은 색인(seq)+D1 이름
 const sameEntp: { seq: string; name: string }[] = [];
@@ -238,20 +237,39 @@ const articleJsonLd = {
 
     <AdSlot slot="2345678901" format="auto" />
 
-    {taboos.length > 0 && (
-      <section>
-        <h3>병용금기 ({taboos.length}건)</h3>
-        <ul>
-          {taboos.slice(0, 10).map((t) => (
-            <li>
-              <strong>{t.MIXTURE_ITEM_NAME}</strong>
-              {t.PROHBT_CONTENT && <span style="color:var(--text-muted)"> — {t.PROHBT_CONTENT}</span>}
-            </li>
-          ))}
-        </ul>
-        {taboos.length > 10 && <p style="color:var(--text-muted);font-size:13px">외 {taboos.length - 10}건</p>}
-      </section>
-    )}
+    <section id="taboo-section" style="display:none">
+      <h3 id="taboo-title">병용금기</h3>
+      <ul id="taboo-list"></ul>
+      <p id="taboo-more" style="color:var(--text-muted);font-size:13px"></p>
+    </section>
+    <script set:html={`
+      (function(){
+        fetch('/api/dur.json?seq=${itemSeq}').then(function(r){return r.json();}).then(function(d){
+          var list = (d && d.taboos) || [];
+          if (!list.length) return;
+          var sec = document.getElementById('taboo-section');
+          var ul = document.getElementById('taboo-list');
+          var title = document.getElementById('taboo-title');
+          var more = document.getElementById('taboo-more');
+          title.textContent = '병용금기 (' + list.length + '건)';
+          list.slice(0,10).forEach(function(t){
+            var li = document.createElement('li');
+            var s = document.createElement('strong');
+            s.textContent = t.name || '';
+            li.appendChild(s);
+            if (t.content) {
+              var span = document.createElement('span');
+              span.style.color = 'var(--text-muted)';
+              span.textContent = ' — ' + t.content;
+              li.appendChild(span);
+            }
+            ul.appendChild(li);
+          });
+          if (list.length > 10) more.textContent = '외 ' + (list.length - 10) + '건';
+          sec.style.display = '';
+        }).catch(function(){});
+      })();
+    `} />
 
     {permitInfo && (
       <section>
