@@ -57,6 +57,24 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 execute medikr-analytics --remote --file=migrations/0001_visits.sql
 
+      - name: Apply D1 drug_cache schema
+        if: github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 execute medikr-analytics --remote --file=migrations/0002_drug_cache.sql
+
+      - name: Seed D1 drug_cache (build-index 가 생성한 약 상세 적재)
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 execute medikr-analytics --remote --file=migrations/seed-drugs.sql
+
       - name: Register D1 binding to Pages project
         if: github.ref == 'refs/heads/main'
         continue-on-error: true

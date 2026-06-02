@@ -31,6 +31,7 @@ console.log(`  e약은요 ${drugs.length}, 낱알 ${pills.length}, 허가 ${perm
   console.log(`  [permits diag] date ${min}~${max} / 2025-07+:${after2025h2} / 2026+:${after2026}`);
 }
 
+const drugMap = new Map(drugs.map((d) => [d.itemSeq, d]));
 const pillMap = new Map(pills.map((p) => [p.ITEM_SEQ, p]));
 const permitMap = new Map(permits.map((p) => [p.ITEM_SEQ, p]));
 
@@ -138,3 +139,47 @@ console.log(`[build-index] 완료 ${(Date.now() - t0) / 1000}s, 합계 ${totalKB
 console.log('  파일:', JSON.stringify(Object.fromEntries(
   Object.entries(sizes).map(([k, v]) => [k, `${(v / 1024).toFixed(0)}KB`])
 ), null, 2));
+
+// ─── D1 seed SQL ─────────────────────────────────────────
+// drug 페이지가 식약처 API(3-7s) 대신 D1 조회(ms)하도록 약 상세를 tb_drug_cache 에 적재.
+// 허가(43k) 기준 + e약은요 텍스트 + 낱알 외형 통합. wrangler d1 execute --file 로 적재(build.yml).
+function sqlStr(s: string | undefined | null): string {
+  if (s == null || s === '') return 'NULL';
+  return `'${String(s).replace(/'/g, "''")}'`;
+}
+const COLS =
+  'item_seq,item_name,entp_name,eng_name,efcy,use_method,atpn_warn,atpn,intrc,se,deposit,item_image,shape,color,print_mark,class_name,otc,form,pill_image,permit_date,spclty,prdct_type,prmisn_no,ingr_name';
+function seedRow(seq: string, name: string): string {
+  const d = drugMap.get(seq);
+  const pill = pillMap.get(seq);
+  const p = permitMap.get(seq);
+  const vals = [
+    sqlStr(seq), sqlStr(name), sqlStr(p?.ENTP_NAME ?? d?.entpName), sqlStr(p?.ITEM_ENG_NAME),
+    sqlStr(d?.efcyQesitm), sqlStr(d?.useMethodQesitm), sqlStr(d?.atpnWarnQesitm), sqlStr(d?.atpnQesitm),
+    sqlStr(d?.intrcQesitm), sqlStr(d?.seQesitm), sqlStr(d?.depositMethodQesitm), sqlStr(d?.itemImage),
+    sqlStr(pill?.DRUG_SHAPE), sqlStr([pill?.COLOR_CLASS1, pill?.COLOR_CLASS2].filter(Boolean).join(', ')),
+    sqlStr([pill?.PRINT_FRONT, pill?.PRINT_BACK].filter(Boolean).join(' / ')),
+    sqlStr(pill?.CLASS_NAME), sqlStr(pill?.ETC_OTC_NAME), sqlStr(pill?.FORM_CODE_NAME), sqlStr(pill?.ITEM_IMAGE),
+    sqlStr(p?.ITEM_PERMIT_DATE), sqlStr(p?.SPCLTY_PBLC), sqlStr(p?.PRDUCT_TYPE), sqlStr(p?.PRDUCT_PRMISN_NO), sqlStr(p?.ITEM_INGR_NAME),
+  ];
+  return `INSERT OR REPLACE INTO tb_drug_cache (${COLS}) VALUES (${vals.join(',')});`;
+}
+
+const seedLines: string[] = [];
+const seededSeqs = new Set<string>();
+for (const p of permits) {
+  if (!p.ITEM_SEQ || seededSeqs.has(p.ITEM_SEQ)) continue;
+  const name = drugMap.get(p.ITEM_SEQ)?.itemName ?? p.ITEM_NAME;
+  if (!name) continue;
+  seededSeqs.add(p.ITEM_SEQ);
+  seedLines.push(seedRow(p.ITEM_SEQ, name));
+}
+// 허가에 없고 e약은요에만 있는 약 (드묾)
+for (const d of drugs) {
+  if (seededSeqs.has(d.itemSeq)) continue;
+  seededSeqs.add(d.itemSeq);
+  seedLines.push(seedRow(d.itemSeq, d.itemName));
+}
+const seedPath = path.join(process.cwd(), 'migrations', 'seed-drugs.sql');
+fs.writeFileSync(seedPath, seedLines.join('\n'));
+console.log(`[build-index] D1 seed: ${seedLines.length} rows, ${(fs.statSync(seedPath).size / 1024 / 1024).toFixed(1)}MB → ${seedPath}`);

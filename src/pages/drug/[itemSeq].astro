@@ -7,90 +7,106 @@ import AdSlot from '../../components/AdSlot.astro';
 import FavoriteButton from '../../components/FavoriteButton.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
-
-// 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천 + permit-only 약 게이트
-import drugNames from '../../data/drug-names.json';
+// 성분 관련약 색인 (작음 0.4MB). 이름/상세/업체·분류 관련약은 D1(tb_drug_cache)에서 조회.
 import ingredientIdx from '../../data/ingredient-idx.json';
-import classIdx from '../../data/class-idx.json';
-import entpIdx from '../../data/entp-idx.json';
 
 const { itemSeq } = Astro.params;
 if (!itemSeq) return Astro.redirect('/search/', 302);
 
-// 색인 lookup 먼저 — 식약처 허가 API 가 단건 조회 불가(필터 무시)라 색인이 valid 게이트.
-// ★ 색인(43k valid 약)에 없으면 식약처 API 호출 없이 즉시 404 → 잘못된 itemSeq 빠른 응답 + 크롤 예산 절약.
-const _allNames = drugNames as Record<string, string>;
-const indexName = _allNames[itemSeq];
-if (!indexName) {
-  return new Response('Drug not found', { status: 404 });
+const env = (Astro.locals as any).runtime?.env;
+const DB = env?.DB;
+
+// 약 상세 — D1 조회(ms). 식약처 API(3-7s)를 빌드 시 적재한 tb_drug_cache 로 대체.
+// D1 미적재/로컬이면 식약처 API fallback (안전망).
+let row: any = null;
+if (DB) {
+  try {
+    row = await DB.prepare('SELECT * FROM tb_drug_cache WHERE item_seq = ?').bind(itemSeq).first();
+  } catch { row = null; }
+}
+if (!row) {
+  const [d, p, pm] = await Promise.all([
+    getEasyDrug(itemSeq), getPillIdent(itemSeq), getDrugPermit(itemSeq),
+  ]);
+  if (!d && !p && !pm) return new Response('Drug not found', { status: 404 });
+  row = {
+    item_seq: itemSeq,
+    item_name: d?.itemName ?? pm?.ITEM_NAME ?? p?.ITEM_NAME ?? '의약품',
+    entp_name: d?.entpName ?? pm?.ENTP_NAME ?? p?.ENTP_NAME ?? '',
+    eng_name: pm?.ITEM_ENG_NAME ?? null,
+    efcy: d?.efcyQesitm ?? null, use_method: d?.useMethodQesitm ?? null,
+    atpn_warn: d?.atpnWarnQesitm ?? null, atpn: d?.atpnQesitm ?? null,
+    intrc: d?.intrcQesitm ?? null, se: d?.seQesitm ?? null, deposit: d?.depositMethodQesitm ?? null,
+    item_image: d?.itemImage ?? null,
+    shape: p?.DRUG_SHAPE ?? null,
+    color: [p?.COLOR_CLASS1, p?.COLOR_CLASS2].filter(Boolean).join(', ') || null,
+    print_mark: [p?.PRINT_FRONT, p?.PRINT_BACK].filter(Boolean).join(' / ') || null,
+    class_name: p?.CLASS_NAME ?? null, otc: p?.ETC_OTC_NAME ?? null, form: p?.FORM_CODE_NAME ?? null,
+    pill_image: p?.ITEM_IMAGE ?? null,
+    permit_date: pm?.ITEM_PERMIT_DATE ?? null, spclty: pm?.SPCLTY_PBLC ?? null,
+    prdct_type: pm?.PRDUCT_TYPE ?? null, prmisn_no: pm?.PRDUCT_PRMISN_NO ?? null, ingr_name: pm?.ITEM_INGR_NAME ?? null,
+  };
 }
 
-// 색인 통과한 valid 약만 식약처 API 4건 병렬 fetch (e약은요/낱알/허가/병용금기)
-const [drugRaw, pill, permit, taboos] = await Promise.all([
-  getEasyDrug(itemSeq),
-  getPillIdent(itemSeq),
-  getDrugPermit(itemSeq),
-  getDurTaboos(itemSeq).catch(() => []),
-]);
-
-// e약은요 없으면 permit/pill/색인 으로 fallback drug 객체 생성 (효능 등 텍스트는 빈 값)
-const drug = drugRaw ?? {
-  itemSeq,
-  itemName: permit?.ITEM_NAME ?? pill?.ITEM_NAME ?? indexName ?? '의약품',
-  entpName: permit?.ENTP_NAME ?? pill?.ENTP_NAME ?? '',
-  efcyQesitm: undefined,
-  useMethodQesitm: undefined,
-  atpnQesitm: undefined,
-  atpnWarnQesitm: undefined,
-  intrcQesitm: undefined,
-  seQesitm: undefined,
-  depositMethodQesitm: undefined,
-  itemImage: undefined,
+// JSX 호환 — 기존 drug / pill / permitInfo 형태로 매핑
+const drug = {
+  itemSeq, itemName: row.item_name, entpName: row.entp_name ?? '',
+  efcyQesitm: row.efcy, useMethodQesitm: row.use_method, atpnWarnQesitm: row.atpn_warn,
+  atpnQesitm: row.atpn, intrcQesitm: row.intrc, seQesitm: row.se, depositMethodQesitm: row.deposit,
+  itemImage: row.item_image,
 } as any;
+const pill = (row.shape || row.color || row.print_mark || row.class_name || row.otc || row.form) ? {
+  DRUG_SHAPE: row.shape, COLOR_CLASS1: row.color, COLOR_CLASS2: undefined,
+  PRINT_FRONT: row.print_mark, PRINT_BACK: undefined,
+  CLASS_NAME: row.class_name, ETC_OTC_NAME: row.otc, FORM_CODE_NAME: row.form, ITEM_IMAGE: row.pill_image,
+} as any : null;
+const permitInfo = (row.permit_date || row.spclty || row.ingr_name || row.prmisn_no || row.prdct_type) ? {
+  ITEM_PERMIT_DATE: row.permit_date, SPCLTY_PBLC: row.spclty, PRDUCT_TYPE: row.prdct_type,
+  PRDUCT_PRMISN_NO: row.prmisn_no, ITEM_INGR_NAME: row.ingr_name, ITEM_ENG_NAME: row.eng_name,
+} as any : null;
 
-// 허가정보 — 단건 permit (e약은요+permit 약). permit-only 약은 단건 조회 불가라 null (이름+관련약만).
-const permitInfo = permit ?? null;
+// 병용금기 (DUR) — 식약처 API (D1 미적재). 느리면 빈 배열로 graceful.
+const taboos = await getDurTaboos(itemSeq).catch(() => []);
 
-// 같은 성분/분류/제약사 약 5개씩 (색인 lookup — 실패해도 graceful)
-const _drugNames = (drugNames ?? {}) as Record<string, string>;
-const _ingredientIdx = (ingredientIdx ?? {}) as Record<string, string[]>;
-const _classIdx = (classIdx ?? {}) as Record<string, string[]>;
-const _entpIdx = (entpIdx ?? {}) as Record<string, string[]>;
-
-const sameIngredient: { seq: string; name: string }[] = [];
-if (permitInfo?.ITEM_INGR_NAME) {
-  const ingredients = permitInfo.ITEM_INGR_NAME.split('/').map((s) => s.trim()).filter(Boolean);
-  const seen = new Set<string>();
-  for (const ing of ingredients) {
-    const list = _ingredientIdx[ing] ?? [];
-    for (const seq of list) {
-      if (seq === itemSeq || seen.has(seq)) continue;
-      const name = _drugNames[seq];
-      if (name) { sameIngredient.push({ seq, name }); seen.add(seq); }
-      if (sameIngredient.length >= 5) break;
-    }
-    if (sameIngredient.length >= 5) break;
-  }
-}
-
-const sameClass: { seq: string; name: string }[] = [];
-if (pill?.CLASS_NAME) {
-  for (const seq of _classIdx[pill.CLASS_NAME] ?? []) {
-    if (seq === itemSeq) continue;
-    const name = _drugNames[seq];
-    if (name) sameClass.push({ seq, name });
-    if (sameClass.length >= 5) break;
-  }
-}
-
+// 관련약 — 같은 업체/분류는 D1 인덱스 쿼리, 같은 성분은 색인(seq)+D1 이름
 const sameEntp: { seq: string; name: string }[] = [];
-if (drug.entpName) {
-  for (const seq of _entpIdx[drug.entpName] ?? []) {
-    if (seq === itemSeq) continue;
-    const name = _drugNames[seq];
-    if (name) sameEntp.push({ seq, name });
-    if (sameEntp.length >= 5) break;
-  }
+const sameClass: { seq: string; name: string }[] = [];
+const sameIngredient: { seq: string; name: string }[] = [];
+if (DB) {
+  try {
+    if (row.entp_name) {
+      const r = await DB.prepare(
+        'SELECT item_seq, item_name FROM tb_drug_cache WHERE entp_name = ? AND item_seq != ? LIMIT 5'
+      ).bind(row.entp_name, itemSeq).all();
+      for (const x of (r.results ?? []) as any[]) sameEntp.push({ seq: x.item_seq, name: x.item_name });
+    }
+    if (row.class_name) {
+      const r = await DB.prepare(
+        'SELECT item_seq, item_name FROM tb_drug_cache WHERE class_name = ? AND item_seq != ? LIMIT 5'
+      ).bind(row.class_name, itemSeq).all();
+      for (const x of (r.results ?? []) as any[]) sameClass.push({ seq: x.item_seq, name: x.item_name });
+    }
+    if (row.ingr_name) {
+      const _ing = ingredientIdx as Record<string, string[]>;
+      const seen = new Set<string>();
+      const cand: string[] = [];
+      for (const ing of String(row.ingr_name).split('/').map((s) => s.trim()).filter(Boolean)) {
+        for (const seq of _ing[ing] ?? []) {
+          if (seq === itemSeq || seen.has(seq)) continue;
+          seen.add(seq); cand.push(seq);
+          if (cand.length >= 5) break;
+        }
+        if (cand.length >= 5) break;
+      }
+      if (cand.length) {
+        const ph = cand.map(() => '?').join(',');
+        const r = await DB.prepare(
+          `SELECT item_seq, item_name FROM tb_drug_cache WHERE item_seq IN (${ph})`
+        ).bind(...cand).all();
+        for (const x of (r.results ?? []) as any[]) sameIngredient.push({ seq: x.item_seq, name: x.item_name });
+      }
+    }
+  } catch { /* 관련약 실패해도 페이지는 정상 */ }
 }
 
 // Cloudflare edge 캐시 (24h TTL)
@@ -162,9 +178,9 @@ const articleJsonLd = {
 
   <article>
     <h2>{drug.itemName}</h2>
-    {permit?.ITEM_ENG_NAME && (
+    {permitInfo?.ITEM_ENG_NAME && (
       <p class="eng-name" style="color:var(--text-muted);font-size:14px;font-style:italic;margin:-6px 0 4px">
-        {permit.ITEM_ENG_NAME}
+        {permitInfo.ITEM_ENG_NAME}
       </p>
     )}
     <p style="color:var(--text-muted);font-size:14px">
