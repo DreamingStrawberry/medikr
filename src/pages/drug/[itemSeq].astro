@@ -18,23 +18,23 @@ import entpIdx from '../../data/entp-idx.json';
 const { itemSeq } = Astro.params;
 if (!itemSeq) return Astro.redirect('/search/', 302);
 
-// 식약처 API 3건 병렬 fetch — drug (e약은요) 가 null 이어도 permit/pill/색인 있으면 표시
+// 색인 lookup 먼저 — 식약처 허가 API 가 단건 조회 불가(필터 무시)라 색인이 valid 게이트.
+// ★ 색인(43k valid 약)에 없으면 식약처 API 호출 없이 즉시 404 → 잘못된 itemSeq 빠른 응답 + 크롤 예산 절약.
+//   (신규 약은 색인 빌드 스냅샷이라 다음 cron 까지 미반영될 수 있으나, 그런 약은 sitemap 에도 없음)
+type PermitMeta = { e: string; d: string; i: string; s: string; t: string; no: string };
+const _allNames = drugNames as Record<string, string>;
+const indexName = _allNames[itemSeq];
+if (!indexName) {
+  return new Response('Drug not found', { status: 404 });
+}
+
+// 색인 통과한 valid 약만 식약처 API 4건 병렬 fetch (e약은요/낱알/허가/병용금기)
 const [drugRaw, pill, permit, taboos] = await Promise.all([
   getEasyDrug(itemSeq),
   getPillIdent(itemSeq),
   getDrugPermit(itemSeq),
   getDurTaboos(itemSeq).catch(() => []),
 ]);
-
-// 색인 lookup — 식약처 허가 API 가 단건 조회 불가(필터 무시)라 permit-only 약은 색인으로 보강
-type PermitMeta = { e: string; d: string; i: string; s: string; t: string; no: string };
-const _allNames = drugNames as Record<string, string>;
-const indexName = _allNames[itemSeq];
-
-// 유효성: 단건 API 매칭 OR 색인(drug-names)에 존재. 둘 다 없으면 진짜 404 (잘못된 itemSeq).
-if (!drugRaw && !permit && !pill && !indexName) {
-  return new Response('Drug not found', { status: 404 });
-}
 
 // permit-meta(7.5MB)는 e약은요·permit 단건 둘 다 없는 permit-only 약일 때만 dynamic import
 // (e약은요 약은 이 거대 색인을 파싱하지 않아 응답 빠름)
