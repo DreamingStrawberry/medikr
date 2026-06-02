@@ -8,10 +8,8 @@ import FavoriteButton from '../../components/FavoriteButton.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import { getEasyDrug, getPillIdent, getDrugPermit, getDurTaboos } from '../../lib/mfds';
 
-// 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천 + permit-only 약 fallback
-// (색인 파싱은 빠름: search.json 의 3.7MB 색인도 0.6s. 느림의 원인은 식약처 API → middleware 캐시로 해결)
+// 빌드 시 생성된 색인 (5만 약) — 같은 성분/분류/제약사 추천 + permit-only 약 게이트
 import drugNames from '../../data/drug-names.json';
-import permitMetaIdx from '../../data/permit-meta.json';
 import ingredientIdx from '../../data/ingredient-idx.json';
 import classIdx from '../../data/class-idx.json';
 import entpIdx from '../../data/entp-idx.json';
@@ -21,8 +19,6 @@ if (!itemSeq) return Astro.redirect('/search/', 302);
 
 // 색인 lookup 먼저 — 식약처 허가 API 가 단건 조회 불가(필터 무시)라 색인이 valid 게이트.
 // ★ 색인(43k valid 약)에 없으면 식약처 API 호출 없이 즉시 404 → 잘못된 itemSeq 빠른 응답 + 크롤 예산 절약.
-//   (신규 약은 색인 빌드 스냅샷이라 다음 cron 까지 미반영될 수 있으나, 그런 약은 sitemap 에도 없음)
-type PermitMeta = { e: string; d: string; i: string; s: string; t: string; no: string };
 const _allNames = drugNames as Record<string, string>;
 const indexName = _allNames[itemSeq];
 if (!indexName) {
@@ -37,15 +33,11 @@ const [drugRaw, pill, permit, taboos] = await Promise.all([
   getDurTaboos(itemSeq).catch(() => []),
 ]);
 
-// permit-only 약(e약은요·permit 단건 둘 다 없음)은 색인 meta 로 상세 보강
-const meta: PermitMeta | undefined =
-  !drugRaw && !permit ? (permitMetaIdx as Record<string, PermitMeta>)[itemSeq] : undefined;
-
 // e약은요 없으면 permit/pill/색인 으로 fallback drug 객체 생성 (효능 등 텍스트는 빈 값)
 const drug = drugRaw ?? {
   itemSeq,
   itemName: permit?.ITEM_NAME ?? pill?.ITEM_NAME ?? indexName ?? '의약품',
-  entpName: permit?.ENTP_NAME ?? pill?.ENTP_NAME ?? meta?.e ?? '',
+  entpName: permit?.ENTP_NAME ?? pill?.ENTP_NAME ?? '',
   efcyQesitm: undefined,
   useMethodQesitm: undefined,
   atpnQesitm: undefined,
@@ -56,17 +48,8 @@ const drug = drugRaw ?? {
   itemImage: undefined,
 } as any;
 
-// 허가정보 — 단건 permit 우선, 없으면 색인 meta 로 보강 (permit-only 약도 성분/허가일/구분 표시)
-const permitInfo = permit ?? (meta ? {
-  ITEM_SEQ: itemSeq,
-  ITEM_NAME: indexName ?? drug.itemName,
-  ENTP_NAME: meta.e,
-  ITEM_PERMIT_DATE: meta.d,
-  SPCLTY_PBLC: meta.s,
-  PRDUCT_TYPE: meta.t,
-  PRDUCT_PRMISN_NO: meta.no,
-  ITEM_INGR_NAME: meta.i,
-} as typeof permit : null);
+// 허가정보 — 단건 permit (e약은요+permit 약). permit-only 약은 단건 조회 불가라 null (이름+관련약만).
+const permitInfo = permit ?? null;
 
 // 같은 성분/분류/제약사 약 5개씩 (색인 lookup — 실패해도 graceful)
 const _drugNames = (drugNames ?? {}) as Record<string, string>;
