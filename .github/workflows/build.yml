@@ -94,3 +94,23 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # 한글 commit message → CF API Invalid UTF-8 회피: SHA + dirty 만 전달
           command: pages deploy dist --project-name=medikr --branch=main --commit-message="${{ github.sha }}"
+
+      - name: IndexNow — 네이버/Bing 색인 알림 (주요 URL + 최근 허가약)
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          KEY="4d6b9f2a8c1e7305b9d4f6a2c8e0b1d3"
+          URLS=$(python3 -c "
+          import json
+          urls = ['https://medikr.kr/','https://medikr.kr/search/','https://medikr.kr/api/','https://medikr.kr/contact/']
+          try:
+            rp = json.load(open('src/data/recent-permits.json'))
+            urls += ['https://medikr.kr/drug/%s/' % r['seq'] for r in rp[:30]]
+          except Exception: pass
+          print(json.dumps(urls))
+          ")
+          echo "IndexNow 제출 URL 수: $(echo "$URLS" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
+          curl -s -X POST "https://api.indexnow.org/indexnow" \
+            -H "Content-Type: application/json" \
+            -d "{\"host\":\"medikr.kr\",\"key\":\"$KEY\",\"keyLocation\":\"https://medikr.kr/$KEY.txt\",\"urlList\":$URLS}" \
+            -w "IndexNow HTTP %{http_code}\n"

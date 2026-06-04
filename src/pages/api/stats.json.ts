@@ -17,19 +17,24 @@ export const GET: APIRoute = async ({ locals }) => {
   const today = kstNow.toISOString().slice(0, 10);
 
   try {
-    const [todayRow, totalRow] = await Promise.all([
+    const [todayRow, totalRow, weekRows] = await Promise.all([
       db.prepare('SELECT visit_cnt FROM tb_visit_stat WHERE visit_date = ?').bind(today).first(),
       db.prepare("SELECT SUM(visit_cnt) as total FROM tb_visit_stat WHERE delcheck='N'").first(),
+      db.prepare("SELECT visit_date, visit_cnt FROM tb_visit_stat WHERE delcheck='N' ORDER BY visit_date DESC LIMIT 7").all(),
     ]);
     return jsonResponse(
       {
         today: Number((todayRow as any)?.visit_cnt ?? 0),
         total: Number((totalRow as any)?.total ?? 0),
         date: today,
+        daily: ((weekRows as any)?.results ?? []).map((r: any) => ({
+          date: r.visit_date,
+          count: Number(r.visit_cnt ?? 0),
+        })),
       },
       { cache: 60 } // 1분 캐시 (실시간 가까이)
     );
   } catch (e) {
-    return jsonResponse({ today: 0, total: 0, error: String(e) });
+    return jsonResponse({ today: 0, total: 0, daily: [], error: String(e) });
   }
 };
