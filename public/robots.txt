@@ -86,4 +86,3 @@ Allow: /
 # ─── 사이트맵 ─────────────────────────────────────
 Sitemap: https://medikr.kr/sitemap.xml
 Sitemap: https://medikr.kr/sitemap-index.xml
-Sitemap: https://medikr.kr/api/sitemap-drugs.xml

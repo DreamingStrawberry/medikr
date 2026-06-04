@@ -140,6 +140,33 @@ console.log('  파일:', JSON.stringify(Object.fromEntries(
   Object.entries(sizes).map(([k, v]) => [k, `${(v / 1024).toFixed(0)}KB`])
 ), null, 2));
 
+// ─── 약 sitemap 분할 (정적 파일) ─────────────────────────
+// 단일 5.66MB sitemap 은 Google 이 '가져올 수 없음' → 15,000개씩 정적 파일로 분할.
+// SSR 동적 라우트는 파일/디렉토리 이름 충돌로 불안정 → public/ 정적 파일로 생성.
+// public/sitemap.xml(index) 이 정적 8페이지(sitemap-0.xml) + 약 분할들을 가리킴.
+{
+  const PER = 15000;
+  const PUB = path.join(process.cwd(), 'public');
+  const chunks = Math.ceil(searchIdx.length / PER);
+  const indexEntries = ['  <sitemap><loc>https://medikr.kr/sitemap-0.xml</loc></sitemap>'];
+  for (let i = 0; i < chunks; i++) {
+    const slice = searchIdx.slice(i * PER, (i + 1) * PER);
+    const urls = slice
+      .map(([seq]) => `  <url><loc>https://medikr.kr/drug/${seq}/</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`)
+      .join('\n');
+    fs.writeFileSync(
+      path.join(PUB, `sitemap-drugs-${i}.xml`),
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`
+    );
+    indexEntries.push(`  <sitemap><loc>https://medikr.kr/sitemap-drugs-${i}.xml</loc></sitemap>`);
+  }
+  fs.writeFileSync(
+    path.join(PUB, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexEntries.join('\n')}\n</sitemapindex>`
+  );
+  console.log(`[build-index] sitemap: ${chunks} 분할 (${searchIdx.length} 약) → public/sitemap.xml + sitemap-drugs-0..${chunks - 1}.xml`);
+}
+
 // ─── D1 seed SQL ─────────────────────────────────────────
 // drug 페이지가 식약처 API(3-7s) 대신 D1 조회(ms)하도록 약 상세를 tb_drug_cache 에 적재.
 // 허가(43k) 기준 + e약은요 텍스트 + 낱알 외형 통합. wrangler d1 execute --file 로 적재(build.yml).
