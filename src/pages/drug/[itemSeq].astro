@@ -132,7 +132,8 @@ function compact(text: string): string {
     .replace(/\n{2,}/g, '\n')
     .trim();
 }
-const metaDesc = (drug.efcyQesitm ?? `${drug.itemName} 의 효능, 부작용, 주의사항 등 식약처 공식 정보`).slice(0, 150);
+// 롱테일 검색 매칭 — 약 이름 + 핵심 키워드(효능/용법/부작용)를 앞세우고 효능 본문 이어붙임
+const metaDesc = `${drug.itemName} 효능·용법·부작용·주의사항. ${drug.efcyQesitm ?? '식약처 공식 의약품 정보'}`.replace(/\s+/g, ' ').slice(0, 160);
 
 // canonical 정규화 — Layout 과 동일하게 trailing slash. sitemap(/drug/xxx/) 과 일치.
 const canonicalUrl = `https://medikr.kr/drug/${itemSeq}/`;
@@ -168,7 +169,7 @@ const articleJsonLd = {
   },
 };
 ---
-<Layout title={drug.itemName} description={metaDesc} ogImage={imageSrc}>
+<Layout title={`${drug.itemName} 효능·부작용·용법`} description={metaDesc} ogImage={imageSrc}>
   <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbList)} />
 
@@ -181,7 +182,7 @@ const articleJsonLd = {
   </nav>
 
   <article>
-    <h2>{drug.itemName}</h2>
+    <h1>{drug.itemName}</h1>
     {permitInfo?.ITEM_ENG_NAME && (
       <p class="eng-name" style="color:var(--text-muted);font-size:14px;font-style:italic;margin:-6px 0 4px">
         {permitInfo.ITEM_ENG_NAME}
